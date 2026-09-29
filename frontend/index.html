@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pattubook • Smart Back-Office Assistant for Small Businesses</title>
+  <meta name="description"
+    content="Lightweight AI assistant unifying invoice extraction, payment reminders, daily MIS reports, email summaries, and GST compliance for Indian retailers and shopkeepers.">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-wrapper">
+        <div class="brand-icon"></div>
+        <div class="brand-text">
+          <h1>PattuBook</h1>
+          <span class="brand-tag">Back Office Assistant</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <a class="nav-item active" data-tab="briefing-view" id="nav-briefing">
+          <span>Daily Briefing</span>
+          <span class="badge-count" id="nav-briefing-badge" style="display: none;">0</span>
+        </a>
+        <a class="nav-item" data-tab="invoices-view" id="nav-invoices">
+          <span>Invoices & Bills</span>
+        </a>
+        <a class="nav-item" data-tab="mis-view" id="nav-mis">
+          <span>MIS & Cash Flow</span>
+        </a>
+        <a class="nav-item" data-tab="comms-view" id="nav-comms">
+          <span>Payment Reminders</span>
+        </a>
+        <a class="nav-item" data-tab="compliance-view" id="nav-compliance">
+          <span>Tax & Compliance</span>
+        </a>
+        <a class="nav-item" data-tab="assistant-view" id="nav-assistant">
+          <span>AI Assistant</span>
+        </a>
+        <a class="nav-item" data-tab="integrations-view" id="nav-integrations">
+          <span>Connected Apps</span>
+        </a>
+        <a class="nav-item" data-tab="settings-view" id="nav-settings">
+          <span>Store Profile</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile-badge">
+          <div class="avatar" id="sidebar-user-avatar">BO</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebar-user-name">Business Owner</div>
+            <div class="user-role">Proprietor / Retailer</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <div class="main-wrapper">
+      <!-- Top Sticky Navigation Bar -->
+      <header class="top-navbar">
+        <div class="store-meta">
+          <div class="store-name-badge">
+            <span class="live-indicator" title="System Active"></span>
+            <span id="nav-store-name">Enterprise Store</span>
+          </div>
+          <span class="gstin-pill" id="nav-store-gstin">GSTIN: Not Configured</span>
+        </div>
+
+        <div class="top-actions">
+          <button class="btn btn-secondary btn-sm" onclick="App.switchTab('assistant-view')"
+            title="Ask Local AI Assistant">
+            Ask AI Assistant
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="App.switchTab('integrations-view')"
+            title="Connected Apps & Cloud">
+            Integrations
+          </button>
+          <button class="btn btn-primary btn-sm" id="header-auth-btn" onclick="AuthComponent.openAuthModal('signin')">
+            Sign In / Register
+          </button>
+          <button class="btn btn-icon" onclick="App.toggleTheme()" id="theme-toggle-btn" title="Toggle Dark/Light Mode">
+            ☀️
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Operational Content Area -->
+      <main class="content-area">
+
+        <!-- Global KPI Ribbon -->
+        <section class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Recorded Sales (Month)</span>
+              <div class="kpi-icon-bubble"
+                style="background: var(--accent-success-light); color: var(--accent-success);"></div>
+            </div>
+            <div class="kpi-value" id="kpi-total-sales">₹ 0.00</div>
+            <div class="kpi-subtext" style="color: var(--accent-success);">
+              <span>Live from daily register</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Pending Receivables</span>
+              <div class="kpi-icon-bubble" style="background: var(--accent-danger-light); color: var(--accent-danger);">
+              </div>
+            </div>
+            <div class="kpi-value" id="kpi-total-receivables" style="color: var(--accent-danger);">₹ 0.00</div>
+            <div class="kpi-subtext" style="color: var(--text-muted);">
+              <span>Customers with overdue credit</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Upcoming GST Deadline</span>
+              <div class="kpi-icon-bubble"
+                style="background: var(--accent-warning-light); color: var(--accent-warning);"></div>
+            </div>
+            <div class="kpi-value" id="kpi-gst-countdown" style="font-size: 1.45rem; color: var(--accent-warning);">
+              GSTR-3B Due</div>
+            <div class="kpi-subtext">
+              <span>Automatic penalty prevention</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">Urgent Communications</span>
+              <div class="kpi-icon-bubble"
+                style="background: var(--accent-primary-light); color: var(--accent-primary);"></div>
+            </div>
+            <div class="kpi-value" id="kpi-unread-actions" style="font-size: 1.45rem;">0 Urgent</div>
+            <div class="kpi-subtext">
+              <span>Bank credits & supplier bills</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 1: MORNING BRIEFING & DAILY COMMUNICATIONS -->
+        <section class="page-view active" id="briefing-view">
+          <div class="briefing-hero" id="briefing-hero-content">
+            <!-- Populated via briefing.js -->
+          </div>
+
+          <div class="glass-panel">
+            <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <h2><span></span> Communications Stream & Daily Mail Digest</h2>
+                  <span class="status-badge status-paid" id="imap-sync-pill"
+                    style="font-size: 0.72rem; padding: 2px 8px;" title="IMAP background daemon active every 5 minutes">
+                    Auto-Sync (5m)
+                  </span>
+                </div>
+                <div class="panel-header-desc">AI categorized messages from Gmail, Yahoo, bank alerts, and GST notices
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-primary btn-sm" id="btn-briefing-sync" onclick="BriefingComponent.syncImapNow()"
+                  title="Fetch new emails immediately via IMAP">
+                  Sync Inbox Now
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="BriefingComponent.openAddEmailModal()">
+                  Ingest Email/Message
+                </button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="emails-table">
+                <thead>
+                  <tr>
+                    <th>Sender & Date</th>
+                    <th>Category</th>
+                    <th>Subject & AI Summary</th>
+                    <th>Action Required</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="emails-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 2: INVOICE & DOCUMENT EXTRACTION HUB -->
+        <section class="page-view" id="invoices-view">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <div>
+                <h2><span></span> Intelligent Invoice & Bill Extractor</h2>
+                <div class="panel-header-desc">Drop purchase/sales PDFs or scans. Automatically extracts Vendor, GSTIN,
+                  Tax, and Line Items.</div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" onclick="InvoicesComponent.exportToCSV()">
+                  <span></span> Export to Tally / Excel
+                </button>
+              </div>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <div class="dropzone-container" id="invoice-dropzone">
+              <input type="file" id="invoice-file-input" accept=".pdf,image/*" style="display: none;" />
+              <div class="dropzone-icon"></div>
+              <div class="dropzone-title">Click to browse or drop PDF Tax Invoice here</div>
+              <div class="dropzone-hint">Supports PDF invoices, scans, and images. GSTIN checksum & HSN items
+                auto-parsed.</div>
+            </div>
+
+            <!-- AI Extraction Info -->
+            <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+
+            </div>
+          </div>
+
+          <!-- Invoices Table -->
+          <div class="glass-panel">
+            <div class="panel-header">
+              <h2><span></span> Processed Invoices Register</h2>
+            </div>
+            <div class="table-responsive">
+              <table class="data-table" id="invoices-table">
+                <thead>
+                  <tr>
+                    <th>Invoice No</th>
+                    <th>Vendor & GSTIN</th>
+                    <th>Dates</th>
+                    <th>Taxable Value</th>
+                    <th>GST Breakdown</th>
+                    <th>Total Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="invoices-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: MIS REPORTS & CASH FLOW INTELLIGENCE -->
+        <section class="page-view" id="mis-view">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <div>
+                <h2><span></span> Executive MIS Dashboard & Financial Health</h2>
+                <div class="panel-header-desc">Consolidated sales, purchases, net cash surplus, and customer debtor
+                  analytics</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('mis-file-input').click()">
+                <span></span> Upload Spreadsheet / Ledger (.xlsx, .csv)
+              </button>
+            </div>
+
+            <!-- Metric summary cards -->
+            <div
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;">
+              <div
+                style="background: var(--bg-surface); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                  Total Sales</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: var(--accent-success);" id="mis-total-sales">₹ 0
+                </div>
+              </div>
+              <div
+                style="background: var(--bg-surface); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                  Purchases & Expenses</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: var(--accent-danger);" id="mis-total-expenses">₹ 0</div>
+                <div style="font-size: 0.73rem; color: var(--text-muted); margin-top: 4px;" id="mis-expenses-breakdown">Store Exp: ₹ 0 | Bills: ₹ 0</div>
+              </div>
+              <div
+                style="background: var(--bg-surface); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                  Vendor Payables (Unpaid)</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: var(--accent-warning);" id="mis-total-payables">₹ 0</div>
+                <div style="font-size: 0.73rem; color: var(--text-muted); margin-top: 4px;" id="mis-payables-subtext">Settled: ₹ 0</div>
+              </div>
+              <div
+                style="background: var(--bg-surface); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                  Net Cash Position</div>
+                <div style="font-size: 1.4rem; font-weight: 700;" id="mis-net-cash">₹ 0</div>
+              </div>
+              <div
+                style="background: var(--bg-surface); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                <div style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">
+                  Market Credit (Debtors)</div>
+                <div style="font-size: 1.4rem; font-weight: 700; color: var(--accent-warning);" id="mis-receivables">₹ 0
+                </div>
+              </div>
+            </div>
+
+            <!-- Daily Trends Chart -->
+            <div style="margin-bottom: 24px;">
+              <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px;">Daily Sales vs Expenses Cash Velocity
+              </h3>
+              <div class="chart-container">
+                <canvas id="mis-trend-canvas"></canvas>
+              </div>
+            </div>
+
+            <!-- AI Executive Commentary Box -->
+            <div
+              style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); padding: 20px; margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4
+                  style="font-weight: 700; font-size: 0.95rem; color: var(--accent-primary); display: flex; align-items: center; gap: 8px;">
+                  <span></span> AI Business Commentary & Operational Takeaways
+                </h4>
+              </div>
+              <div id="mis-ai-commentary">
+                <!-- Populated via mis.js -->
+              </div>
+            </div>
+
+            <!-- Debtors Aging Breakdown -->
+            <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 12px;">Receivables Aging Breakdown</h3>
+            <div
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px;">
+              <div
+                style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 14px; border-radius: 8px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted);">0 - 15 Days (Current)</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-success);" id="aging-0-15">₹ 0
+                </div>
+              </div>
+              <div
+                style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 14px; border-radius: 8px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted);">16 - 30 Days (Due Soon)</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-info);" id="aging-16-30">₹ 0</div>
+              </div>
+              <div
+                style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 14px; border-radius: 8px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted);">31 - 60 Days (Attention)</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-warning);" id="aging-31-60">₹ 0
+                </div>
+              </div>
+              <div
+                style="background: var(--bg-card); border: 1px solid var(--border-subtle); padding: 14px; border-radius: 8px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted);">60+ Days (High Risk)</div>
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-danger);" id="aging-60-plus">₹ 0
+                </div>
+              </div>
+            </div>
+
+            <!-- Top Debtors Table -->
+            <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 12px;">Top 5 Customers with Overdue Balance
+            </h3>
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Customer Name</th>
+                    <th>Pending Balance</th>
+                    <th>Exposure Level</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="debtors-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Recent Vendor Purchases & Payables (Outflows) -->
+            <div style="margin-top: 28px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="font-size: 1rem; font-weight: 600;">Recent Vendor Purchases & Payables (Outflows)</h3>
+                <button class="btn btn-secondary btn-sm" onclick="App.switchTab('invoices-view')">
+                  Open Invoices & Bills
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Vendor / Supplier</th>
+                      <th>Invoice Ref</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="purchases-table-body">
+                    <!-- Populated dynamically via mis.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Ingest New Spreadsheet -->
+            <div style="margin-top: 24px; border-top: 1px solid var(--border-subtle); padding-top: 20px;">
+              <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 10px;">Upload Custom Sales / Expense
+                Spreadsheet</h4>
+              <div class="dropzone-container" id="mis-dropzone" style="padding: 24px;">
+                <input type="file" id="mis-file-input" accept=".xlsx,.xls,.csv" style="display: none;" />
+                <div class="dropzone-icon"></div>
+                <div class="dropzone-title">Upload Excel (.xlsx) or CSV Sales Register</div>
+                <div class="dropzone-hint">Maps columns: Date, Party Name, Type (Sale/Expense), Amount, Mode
+                  automatically.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 4: PAYMENT REMINDERS & SMART COMMUNICATIONS -->
+        <section class="page-view" id="comms-view">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <div>
+                <h2><span></span> Smart Payment Reminders & WhatsApp Dispatcher</h2>
+                <div class="panel-header-desc">Draft personalized payment notices with embedded instant UPI quick-pay
+                  links</div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 24px;">
+              <!-- Form Generator -->
+              <div>
+                <div class="form-group">
+                  <label class="form-label">Select Customer / Quick Pick</label>
+                  <select id="comm-customer-select" class="form-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Customer / Party Name</label>
+                  <input type="text" id="comm-customer-name" class="form-input"
+                    placeholder="Enter customer or buyer name" />
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label class="form-label">Invoice Number</label>
+                    <input type="text" id="comm-inv-no" class="form-input" placeholder="e.g. INV-001" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Pending Amount (₹)</label>
+                    <input type="number" id="comm-amount" class="form-input" placeholder="Amount in ₹" />
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label class="form-label">Due Date</label>
+                    <input type="text" id="comm-due-date" class="form-input"
+                      placeholder="e.g. Immediate / DD-MM-YYYY" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Customer Mobile (WhatsApp)</label>
+                    <input type="text" id="comm-phone" class="form-input" placeholder="10-digit WhatsApp phone" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Tone of Communication</label>
+                  <select id="comm-tone-select" class="form-select" onchange="CommsComponent.generateReminderPreview()">
+                    <option value="professional" selected>Professional (Formal & Polite)</option>
+                    <option value="gentle">Gentle (Friendly Reminder)</option>
+                    <option value="firm">Firm / Urgent (Overdue Notice)</option>
+                    <option value="hinglish">Hinglish (Local Indian Retail Style)</option>
+                  </select>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%;" onclick="CommsComponent.generateReminderPreview()">
+                  <span></span> Regenerate Message Preview
+                </button>
+              </div>
+
+              <!-- Message Preview and Dispatcher -->
+              <div id="comm-preview-box">
+                <!-- Rendered dynamically by comms.js -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 5: INDIAN COMPLIANCE & TAX CALENDAR -->
+        <section class="page-view" id="compliance-view">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <div>
+                <h2><span></span> Indian Statutory & GST Compliance Guardian</h2>
+                <div class="panel-header-desc">Automatic monitoring of GSTR-1, GSTR-3B, TDS, and Advance Tax deadlines
+                  to prevent late fees</div>
+              </div>
+            </div>
+
+            <!-- Compliance Cards Grid -->
+            <div class="kpi-grid" id="compliance-cards-grid"
+              style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+              <!-- Populated dynamically via compliance.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 6: BUSINESS PROFILE & SETTINGS -->
+        <section class="page-view" id="settings-view">
+          <div class="glass-panel" style="max-width: 780px; margin: 0 auto;">
+            <div class="panel-header">
+              <div>
+                <h2><span></span> Store Profile & Integration Settings</h2>
+                <div class="panel-header-desc">Customize your Indian business details, UPI payment links, and AI
+                  configuration</div>
+              </div>
+            </div>
+
+            <form onsubmit="SettingsComponent.saveSettings(event)">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label class="form-label">Business / Shop Name</label>
+                  <input type="text" id="set-biz-name" class="form-input" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Proprietor / Owner Name</label>
+                  <input type="text" id="set-owner-name" class="form-input" required />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label class="form-label">GSTIN (15-Character Tax ID)</label>
+                  <input type="text" id="set-gstin" class="form-input" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Business UPI ID (for Quick-Pay Links)</label>
+                  <input type="text" id="set-upi-id" class="form-input" placeholder="e.g. mobile@okhdfcbank" required />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label class="form-label">Store Phone / Mobile</label>
+                  <input type="text" id="set-phone" class="form-input" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Chartered Accountant (CA) Email</label>
+                  <input type="email" id="set-ca-email" class="form-input" />
+                </div>
+              </div>
+
+              <!-- AI Intelligence Engine Configuration -->
+              <div class="form-group"
+                style="border-top: 1px solid var(--border-subtle); padding-top: 18px; margin-top: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <label class="form-label" style="margin-bottom: 0; font-weight: 700; font-size: 0.95rem;">AI
+                    Intelligence Engine (100% Local)</label>
+                  <span id="settings-local-ai-badge" class="badge badge-success">Checking AI...</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px;">
+                  <div>
+                    <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted);">Active
+                      Provider</label>
+                    <select id="set-ai-provider" class="form-input" disabled>
+                      <option value="local" selected>100% Local AI (Ollama - Private & Free)</option>
+                    </select>
+                  </div>
+                  <div id="local-model-group">
+                    <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted);">Active Local
+                      Model</label>
+                    <select id="set-local-model" class="form-input">
+                      <option value="gemma2:2b">gemma2:2b (Fastest, 2.6B)</option>
+                      <option value="phi3:latest">phi3:latest (High Accuracy, 3.8B)</option>
+                      <option value="gemma:2b">gemma:2b (3B)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div id="local-ai-note"
+                  style="font-size: 0.78rem; color: var(--accent-success); margin-bottom: 14px; background: rgba(16, 185, 129, 0.08); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                  Active: Running 100% locally and privately on your machine. Zero cloud fees, zero external rate
+                  limits, and complete data privacy.
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                <button type="submit" class="btn btn-primary">
+                  <span></span> Save Business Profile
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Data Reset Panel -->
+          <div class="glass-panel"
+            style="max-width: 780px; margin: 24px auto 0; border: 1px solid rgba(239, 68, 68, 0.25);">
+            <div class="panel-header" style="margin-bottom: 0;">
+              <div>
+                <h3 style="color: var(--accent-danger); font-size: 1rem; font-weight: 700;">Data Management & Reset</h3>
+                <div class="panel-header-desc">Purge all operational invoices, transactions, and email records for a
+                  fresh production database.</div>
+              </div>
+              <button class="btn btn-danger btn-sm" onclick="SettingsComponent.purgeData()">
+                Purge Test Records
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 7: CROSS-PLATFORM INTEGRATIONS & APPS HUB -->
+        <section class="page-view" id="integrations-view">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <div>
+                <h2>Cross-Platform Integrations & Connected Apps Hub</h2>
+                <div class="panel-header-desc">Synchronize Google Calendar, Gmail, WhatsApp Business, Tally Prime, and
+                  Railway Cloud Database</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="IntegrationsComponent.init()">
+                Refresh Connectivity
+              </button>
+            </div>
+
+            <!-- Integrations Cards Grid -->
+            <div class="kpi-grid" id="integrations-cards-grid"
+              style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+              <!-- Populated dynamically via integrations.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 8: INTERACTIVE PATTUBOOK BACK OFFICE ASSISTANT -->
+        <section class="page-view" id="assistant-view">
+          <div class="glass-panel"
+            style="max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 160px); min-height: 580px;">
+            <div class="panel-header"
+              style="padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;">
+              <div>
+                <h2>PattuBook Back Office Assistant</h2>
+                <div class="panel-header-desc">100% Private, Local AI assistant for Indian GST rules, cash flow
+                  optimization, vendor letters, and debt collection</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span id="assistant-status-badge" class="badge badge-success">Local AI Online</span>
+                <button class="btn btn-secondary btn-sm" id="assistant-clear-btn">Clear Chat</button>
+              </div>
+            </div>
+
+            <!-- Chat History Log -->
+            <div id="assistant-chat-log" style="flex: 1; overflow-y: auto; padding: 18px 8px; margin: 10px 0;">
+              <div style="text-align: center; color: var(--text-muted); padding: 40px 20px;">
+                <h4 style="color: var(--text-primary); margin-bottom: 8px;">How can I assist your business today?</h4>
+                <p style="font-size: 0.88rem; max-width: 500px; margin: 0 auto;">
+                  Ask any question regarding Indian GST filing, cash flow management, payment recovery notices, or tax
+                  calculations.
+                </p>
+              </div>
+            </div>
+
+            <!-- Input Bar -->
+            <div
+              style="display: flex; gap: 10px; align-items: center; padding-top: 12px; border-top: 1px solid var(--border-subtle); flex-shrink: 0;">
+              <input type="text" id="assistant-input" class="form-input"
+                style="flex: 1; padding: 12px 16px; border-radius: 24px;"
+                placeholder="Ask about GST rules, sales, expenses, cash flow, debts, or specific dates..." />
+              <button class="btn btn-primary" id="assistant-send-btn" style="border-radius: 24px; padding: 12px 24px;">
+                Send
+              </button>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Generic Modal Dialog -->
+  <div class="modal-backdrop" id="generic-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-generic-title" style="font-size: 1.15rem; font-weight: 700;">Details</h3>
+        <button class="btn btn-icon" onclick="App.closeModal()">X</button>
+      </div>
+      <div class="modal-body" id="modal-generic-body">
+        <!-- Injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/static/js/auth.js?v=2.8"></script>
+  <script src="/static/js/integrations.js?v=2.8"></script>
+  <script src="/static/js/assistant.js?v=2.8"></script>
+  <script src="/static/js/briefing.js?v=2.8"></script>
+  <script src="/static/js/invoices.js?v=2.8"></script>
+  <script src="/static/js/mis.js?v=2.8"></script>
+  <script src="/static/js/comms.js?v=2.8"></script>
+  <script src="/static/js/compliance.js?v=2.8"></script>
+  <script src="/static/js/settings.js?v=2.8"></script>
+  <script src="/static/js/app.js?v=2.8"></script>
+</body>
+
+</html>

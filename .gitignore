@@ -1,0 +1,95 @@
+# ==============================================================================
+# Git Ignore - PattuBook Back Office Assistant
+# ==============================================================================
+
+# Secrets and Environment Variables (NEVER commit secrets to source control)
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# Local SQLite Databases & Data State
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Uploaded Files & Runtime Storage (Preserve folder structure via .gitkeep)
+data/uploads/*
+!data/uploads/.gitkeep
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Editor & IDE Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Logs & Temporary Files
+check_mis.py
+example.xlsx
+*.log
+logs/
+scratch/
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Deployment & Build caches
+.nixpacks/
+.railway/
