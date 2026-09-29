@@ -17,11 +17,12 @@ const BriefingComponent = {
       btn.innerText = "Syncing Inbox...";
     }
     try {
-      const res = await fetch("/api/integrations/gmail/sync", { method: "POST" });
+      const headers = typeof AuthComponent !== "undefined" ? AuthComponent.getAuthHeaders() : {};
+      const res = await fetch("/api/integrations/gmail/sync", { method: "POST", headers });
       const data = await res.json();
       if (data.status === "auth_error") {
         App.showToast(data.message, "danger");
-      } else if (data.status === "preview_mode") {
+      } else if (data.status === "preview_mode" || data.status === "not_configured" || data.status === "guest") {
         App.showToast(data.message, "warning");
       } else {
         App.showToast(data.message || "Inbox synchronized successfully!", "success");
@@ -42,19 +43,20 @@ const BriefingComponent = {
 
   async checkImapStatus() {
     try {
-      const res = await fetch("/api/integrations/imap/status");
+      const headers = typeof AuthComponent !== "undefined" ? AuthComponent.getAuthHeaders() : {};
+      const res = await fetch("/api/integrations/imap/status", { headers });
       if (res.ok) {
         const status = await res.json();
         const pill = document.getElementById("imap-sync-pill");
         if (pill) {
           if (status.enabled) {
             pill.className = "status-badge status-paid";
-            pill.innerText = `Auto-Sync (5m Active)`;
-            pill.title = `Connected to ${status.host} (${status.user || 'configured'}). Next cycle scheduled in 5m.`;
+            pill.innerText = `Auto-Sync (Active)`;
+            pill.title = `Connected to ${status.user || status.host}. Automated background sync active.`;
           } else {
             pill.className = "status-badge status-pending";
             pill.innerText = `IMAP Standby`;
-            pill.title = `Add Google App Password in .env to pull emails automatically every 5 mins.`;
+            pill.title = `Connect your Gmail in Integrations to sync inbox automatically.`;
           }
         }
       }
@@ -65,7 +67,8 @@ const BriefingComponent = {
 
   async loadBriefing() {
     try {
-      const res = await fetch("/api/emails/briefing");
+      const headers = typeof AuthComponent !== "undefined" ? AuthComponent.getAuthHeaders() : {};
+      const res = await fetch("/api/emails/briefing", { headers });
       const data = await res.json();
 
       const heroEl = document.getElementById("briefing-hero-content");
@@ -139,7 +142,8 @@ const BriefingComponent = {
 
   async loadEmailFeed() {
     try {
-      const res = await fetch("/api/emails");
+      const headers = typeof AuthComponent !== "undefined" ? AuthComponent.getAuthHeaders() : {};
+      const res = await fetch("/api/emails", { headers });
       const emails = await res.json();
       const tbody = document.getElementById("emails-table-body");
       if (!tbody) return;

@@ -148,74 +148,26 @@ def generate_ical_stream(events: List[Dict[str, Any]], calendar_name: str = "Pat
 def sync_gmail_inbox(user_id: Optional[int] = None) -> Dict[str, Any]:
     """
     Ingests live business communications (bills, bank alerts, tax alerts) from Gmail / Yahoo
-    via IMAP over SSL with AI classification. Falls back to demo items if credentials are not configured.
+    via IMAP over SSL with AI classification for the specific user.
     """
     from backend.services.imap_service import fetch_emails_from_imap, get_imap_credentials
     
-    creds = get_imap_credentials()
+    creds = get_imap_credentials(user_id=user_id)
     if creds["is_configured"]:
         return fetch_emails_from_imap(max_count=15, user_id=user_id)
 
-    # If IMAP credentials are not yet entered, load preview communications and notify user
-    session = SessionLocal()
-    try:
-        now = datetime.now()
-        fresh_emails = [
-            {
-                "sender": "HDFC Bank Alert",
-                "sender_email": "alerts@hdfcbank.net",
-                "subject": f"NEFT Credit of INR 45,000.00 to A/c **4120 on {now.strftime('%d-%b')}",
-                "body": f"Dear Customer, your account **4120 has been credited with INR 45,000.00 on {now.strftime('%d-%b-%Y')} by Bajaj Electricals Distributors via NEFT Ref UTR: HDFC0099823. Available balance updated.",
-                "date": now.strftime("%Y-%m-%d %H:%M")
-            },
-            {
-                "sender": "GSTN Helpdesk",
-                "sender_email": "notifications@gst.gov.in",
-                "subject": "Advisory: GSTR-3B return for current tax period is due shortly",
-                "body": "Taxpayers are advised to file their GSTR-3B return on or before the due date to avoid late fees and interest under Section 50 of CGST Act. Ensure ITC matches GSTR-2B.",
-                "date": (now - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M")
-            },
-            {
-                "sender": "Kishore Traders",
-                "sender_email": "orders@kishoretraders.in",
-                "subject": "URGENT: Purchase Order #KT-889 for 50 rolls Copper Wire 2.5mm",
-                "body": "Please find attached our purchase order for 50 rolls copper wire. Kindly confirm dispatch schedule and send Proforma Invoice with your bank details.",
-                "date": (now - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M")
-            }
-        ]
-
-        added_count = 0
-        for item in fresh_emails:
-            existing = session.query(EmailItem).filter(EmailItem.subject == item["subject"]).first()
-            if not existing:
-                classified = classify_email(item["sender"], item["subject"], item["body"])
-                em = EmailItem(
-                    user_id=user_id,
-                    sender=item["sender"],
-                    sender_email=item["sender_email"],
-                    subject=item["subject"],
-                    date=item["date"],
-                    raw_body=item["body"],
-                    summary=classified["summary"],
-                    category=classified["category"],
-                    priority=classified["priority"],
-                    action_required=classified["action_required"],
-                    is_read=0
-                )
-                session.add(em)
-                added_count += 1
-
-        session.commit()
+    if not user_id:
         return {
-            "status": "preview_mode",
-            "synced_count": added_count,
-            "message": "Demo emails ingested. Add your Gmail App Password to .env to pull live emails every 5 minutes automatically."
+            "status": "guest",
+            "synced_count": 0,
+            "message": "Please sign in to connect your Gmail inbox and sync communications."
         }
-    except Exception as e:
-        session.rollback()
-        return {"status": "error", "message": str(e)}
-    finally:
-        session.close()
+
+    return {
+        "status": "not_configured",
+        "synced_count": 0,
+        "message": "No Gmail account connected. Please connect your Gmail in Integrations using an App Password."
+    }
 
 def export_tally_xml(user_id: Optional[int] = None) -> str:
     """Generate Tally Prime / ERP 9 XML import format for invoices."""
@@ -313,8 +265,12 @@ def export_tally_csv(user_id: Optional[int] = None) -> str:
 def get_integrations_status(user_id: Optional[int] = None) -> Dict[str, Any]:
     """Retrieve health and configuration status for all supported platforms."""
     from backend.services.imap_service import get_imap_status_summary
-    imap_info = get_imap_status_summary()
+    imap_info = get_imap_status_summary(user_id=user_id)
     db_engine_name = "PostgreSQL (Railway Production)" if IS_POSTGRES else "SQLite (Local Development)"
+
+    gmail_status = "connected" if imap_info.get("enabled") else ("guest" if user_id is None else "ready")
+    user_display = imap_info.get("user") or ("Sign in to connect Gmail" if user_id is None else "No Gmail connected")
+
     return {
         "database": {
             "engine": db_engine_name,
@@ -334,16 +290,17 @@ def get_integrations_status(user_id: Optional[int] = None) -> Dict[str, Any]:
         },
         "gmail": {
             "name": "Gmail & Google Workspace (IMAP)",
-            "status": "connected" if imap_info.get("enabled") else "ready",
+            "status": gmail_status,
             "imap_configured": imap_info.get("enabled", False),
+            "is_user_connected": imap_info.get("is_user_connected", False),
             "imap_host": imap_info.get("host", "imap.gmail.com"),
-            "imap_user": imap_info.get("user", ""),
+            "imap_user": user_display,
             "sync_interval_minutes": imap_info.get("interval_minutes", 5),
             "last_sync": imap_info.get("last_sync_time"),
             "next_sync": imap_info.get("next_sync_time"),
             "sync_status": imap_info.get("last_status"),
             "features": [
-                f"Automated 5-minute background sync timer ({imap_info.get('interval_minutes', 5)}m)",
+                f"Automated background sync worker ({imap_info.get('interval_minutes', 5)}m)",
                 "AI email categorization & invoice attachment OCR",
                 "Direct Web Composer & Chartered Accountant dispatch"
             ]

@@ -379,7 +379,7 @@ def extract_invoice_data(file_path: str, filename: str = "") -> Dict[str, Any]:
     # Fallback to heuristic result
     return heuristic_result
 
-def save_invoice_to_db(data: Dict[str, Any], file_name: str, file_path: str) -> int:
+def save_invoice_to_db(data: Dict[str, Any], file_name: str, file_path: str, user_id: Optional[int] = None) -> int:
     """Save extracted invoice into SQLite database."""
     conn = get_db()
     cursor = conn.cursor()
@@ -396,8 +396,8 @@ def save_invoice_to_db(data: Dict[str, Any], file_name: str, file_path: str) -> 
             file_name, file_path, invoice_number, invoice_type,
             vendor_name, customer_name, vendor_gstin, buyer_gstin,
             invoice_date, due_date, subtotal, cgst, sgst, igst,
-            total_tax, total_amount, line_items, status, extraction_method
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            total_tax, total_amount, line_items, status, extraction_method, user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         file_name,
         file_path,
@@ -417,7 +417,8 @@ def save_invoice_to_db(data: Dict[str, Any], file_name: str, file_path: str) -> 
         data.get("total_amount", 0.0),
         line_items_json,
         data.get("status", "Unpaid"),
-        data.get("extraction_method", "rule_based")
+        data.get("extraction_method", "rule_based"),
+        user_id
     ))
     
     inv_id = cursor.lastrowid
@@ -429,14 +430,17 @@ def save_invoice_to_db(data: Dict[str, Any], file_name: str, file_path: str) -> 
     txn_status = "settled" if data.get("status", "").lower() == "paid" else "pending"
 
     if inv_num and amount > 0:
-        cursor.execute("SELECT id FROM transactions WHERE reference_no = ? AND party_name = ?", (inv_num, vendor))
+        if user_id:
+            cursor.execute("SELECT id FROM transactions WHERE reference_no = ? AND party_name = ? AND user_id = ?", (inv_num, vendor, user_id))
+        else:
+            cursor.execute("SELECT id FROM transactions WHERE reference_no = ? AND party_name = ? AND user_id IS NULL", (inv_num, vendor))
         existing_txn = cursor.fetchone()
         if not existing_txn:
             cursor.execute('''
                 INSERT INTO transactions (
-                    date, type, party_name, category, amount, payment_mode, status, due_date, reference_no
-                ) VALUES (?, 'purchase', ?, 'Vendor Invoice', ?, 'Bank/NEFT', ?, ?, ?)
-            ''', (inv_date, vendor, amount, txn_status, due_date, inv_num))
+                    date, type, party_name, category, amount, payment_mode, status, due_date, reference_no, user_id
+                ) VALUES (?, 'purchase', ?, 'Vendor Invoice', ?, 'Bank/NEFT', ?, ?, ?, ?)
+            ''', (inv_date, vendor, amount, txn_status, due_date, inv_num, user_id))
         else:
             txn_db_id = existing_txn["id"] if (isinstance(existing_txn, dict) or hasattr(existing_txn, "keys")) else existing_txn[0]
             cursor.execute('''

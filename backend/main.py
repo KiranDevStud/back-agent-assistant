@@ -199,13 +199,8 @@ async def api_upload_invoice(file: UploadFile = File(...), user: Optional[User] 
         shutil.copyfileobj(file.file, buffer)
         
     data = extract_invoice_data(str(file_path), file.filename)
-    inv_id = save_invoice_to_db(data, file.filename, str(file_path))
-    if user:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE invoices SET user_id = ? WHERE id = ?", (user.id, inv_id))
-        conn.commit()
-        conn.close()
+    user_id = user.id if user else None
+    inv_id = save_invoice_to_db(data, file.filename, str(file_path), user_id=user_id)
 
     data["id"] = inv_id
     return {"message": "Invoice processed successfully", "data": data}
@@ -217,13 +212,8 @@ def api_process_sample_invoice(filename: str = Form(...), user: Optional[User] =
         raise HTTPException(status_code=404, detail="Sample invoice not found")
         
     data = extract_invoice_data(str(sample_path), filename)
-    inv_id = save_invoice_to_db(data, filename, str(sample_path))
-    if user:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE invoices SET user_id = ? WHERE id = ?", (user.id, inv_id))
-        conn.commit()
-        conn.close()
+    user_id = user.id if user else None
+    inv_id = save_invoice_to_db(data, filename, str(sample_path), user_id=user_id)
     data["id"] = inv_id
     return {"message": f"Sample invoice {filename} extracted successfully", "data": data}
 

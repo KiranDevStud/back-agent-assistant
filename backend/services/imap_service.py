@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from backend.config import BASE_DIR, UPLOADS_DIR
 from backend.database import SessionLocal, get_all_settings
-from backend.models import EmailItem, Invoice
+from backend.models import EmailItem, Invoice, ConnectedApp
 from backend.services.email_summarizer import classify_email
 
 # Global scheduler state
@@ -32,14 +32,38 @@ class ImapSyncState:
 sync_state = ImapSyncState()
 
 
-def get_imap_credentials() -> Dict[str, Any]:
+def get_imap_credentials(user_id: Optional[int] = None) -> Dict[str, Any]:
     """
-    Retrieve IMAP credentials dynamically from environment (.env) with fallback to settings.
-    Reloads .env so changes made while server is running take effect immediately.
+    Retrieve IMAP credentials.
+    Priority 1: Per-user ConnectedApp from database if user_id is provided.
+    Priority 2: Fallback to environment variables (.env) if configured (e.g. local dev).
     """
+    # 1. Check user-specific ConnectedApp in database
+    if user_id:
+        session = SessionLocal()
+        try:
+            conn_app = session.query(ConnectedApp).filter(
+                ConnectedApp.user_id == user_id,
+                ConnectedApp.provider == "gmail",
+                ConnectedApp.is_active == True
+            ).first()
+            if conn_app and conn_app.account_email and conn_app.access_token:
+                pwd = conn_app.access_token.strip().replace(" ", "")
+                return {
+                    "host": "imap.gmail.com",
+                    "port": 993,
+                    "user": conn_app.account_email.strip(),
+                    "password": pwd,
+                    "interval_minutes": 5,
+                    "folder": "INBOX",
+                    "is_configured": bool(conn_app.account_email and pwd),
+                    "is_user_connected": True
+                }
+        finally:
+            session.close()
+
+    # 2. Fallback to server environment variables (.env)
     load_dotenv(override=True)
-    
-    # Priority: explicit IMAP vars -> SMTP vars -> general email vars
     host = os.getenv("IMAP_HOST", "imap.gmail.com").strip()
     port = int(os.getenv("IMAP_PORT", "993"))
     user = (
@@ -67,7 +91,8 @@ def get_imap_credentials() -> Dict[str, Any]:
         "password": password,
         "interval_minutes": max(1, interval_minutes),
         "folder": folder,
-        "is_configured": bool(user and password and password != "your_app_specific_password")
+        "is_configured": bool(user and password and password != "your_app_specific_password"),
+        "is_user_connected": False
     }
 
 
@@ -211,14 +236,14 @@ def parse_email_message(msg: email.message.Message) -> Dict[str, Any]:
 def fetch_emails_from_imap(max_count: int = 15, user_id: Optional[int] = None) -> Dict[str, Any]:
     """
     Connects to IMAP server, searches for new or recent messages, classifies them,
-    and inserts non-duplicate records into the database.
+    and inserts non-duplicate records into the database for the given user_id.
     """
-    creds = get_imap_credentials()
+    creds = get_imap_credentials(user_id=user_id)
     if not creds["is_configured"]:
         return {
             "status": "not_configured",
             "synced_count": 0,
-            "message": "IMAP credentials not configured in .env. Please set IMAP_USER and IMAP_PASSWORD (or SMTP_USER and SMTP_PASSWORD)."
+            "message": "No Gmail account connected. Please connect your Gmail with an App Password in Integrations."
         }
 
     host = creds["host"]
@@ -278,12 +303,17 @@ def fetch_emails_from_imap(max_count: int = 15, user_id: Optional[int] = None) -
             msg = email.message_from_bytes(raw_email)
             parsed = parse_email_message(msg)
 
-            # Avoid duplicates by checking existing records with same subject and sender_email or date
-            existing = session.query(EmailItem).filter(
+            # Avoid duplicates by checking existing records with same subject and sender_email or date for this user
+            existing_query = session.query(EmailItem).filter(
                 EmailItem.subject == parsed["subject"],
                 EmailItem.sender_email == parsed["sender_email"],
                 EmailItem.date == parsed["date"]
-            ).first()
+            )
+            if user_id is not None:
+                existing_query = existing_query.filter(EmailItem.user_id == user_id)
+            else:
+                existing_query = existing_query.filter(EmailItem.user_id.is_(None))
+            existing = existing_query.first()
 
             if not existing:
                 classified = classify_email(parsed["sender"], parsed["subject"], parsed["body"], parsed.get("attachments", []))
@@ -311,8 +341,8 @@ def fetch_emails_from_imap(max_count: int = 15, user_id: Optional[int] = None) -
                             from backend.services.invoice_extractor import extract_invoice_data, save_invoice_to_db
                             inv_data = extract_invoice_data(att["file_path"], att["file_name"])
                             inv_data["notes"] = f"Auto-ingested from email: '{parsed['subject']}' from {parsed['sender']}"
-                            save_invoice_to_db(inv_data, att["file_name"], att["file_path"])
-                            print(f"[IMAP] Auto-created invoice from email attachment: {att['file_name']}")
+                            save_invoice_to_db(inv_data, att["file_name"], att["file_path"], user_id=user_id)
+                            print(f"[IMAP] Auto-created invoice for user {user_id} from email attachment: {att['file_name']}")
                             # Update email item with direct invoice details
                             new_item.category = "Vendor Invoice"
                             new_item.priority = "high"
@@ -358,28 +388,50 @@ def fetch_emails_from_imap(max_count: int = 15, user_id: Optional[int] = None) -
 
 
 def run_imap_sync_cycle():
-    """Execute a single sync cycle and update state metrics."""
+    """Execute a single sync cycle across active connected accounts."""
     now = datetime.now()
     sync_state.last_sync_time = now
-    creds = get_imap_credentials()
-    interval_secs = creds["interval_minutes"] * 60
-    sync_state.next_sync_time = now + timedelta(seconds=interval_secs)
+    
+    session = SessionLocal()
+    has_synced = False
+    try:
+        active_apps = session.query(ConnectedApp).filter(
+            ConnectedApp.provider == "gmail",
+            ConnectedApp.is_active == True
+        ).all()
+        
+        if active_apps:
+            for app in active_apps:
+                try:
+                    fetch_emails_from_imap(max_count=15, user_id=app.user_id)
+                except Exception as app_err:
+                    print(f"[IMAP Auto-Sync User {app.user_id}] {app_err}")
+            sync_state.last_status = "synced"
+            sync_state.last_message = f"Background sync completed for {len(active_apps)} connected accounts."
+            has_synced = True
+    except Exception as db_err:
+        print(f"[IMAP Auto-Sync DB Error] {db_err}")
+    finally:
+        session.close()
 
-    if not creds["is_configured"]:
-        sync_state.last_status = "waiting_for_credentials"
-        sync_state.last_message = "IMAP credentials not configured in .env. Waiting for IMAP_USER and IMAP_PASSWORD."
-        return
+    if not has_synced:
+        creds = get_imap_credentials()
+        interval_secs = creds["interval_minutes"] * 60
+        sync_state.next_sync_time = now + timedelta(seconds=interval_secs)
 
-    sync_state.last_status = "syncing"
-    res = fetch_emails_from_imap(max_count=15)
-    sync_state.last_status = res.get("status", "unknown")
-    sync_state.last_message = res.get("message", "")
-    if res.get("status") in ["error", "auth_error"]:
-        sync_state.last_error = res.get("message")
-        print(f"[IMAP Auto-Sync Warning] {res.get('message')}")
-    else:
-        sync_state.last_error = None
-        print(f"[IMAP Auto-Sync] {res.get('message')}")
+        if not creds["is_configured"]:
+            sync_state.last_status = "waiting_for_credentials"
+            sync_state.last_message = "No accounts connected. Connect Gmail in Integrations using an App Password."
+            return
+
+        sync_state.last_status = "syncing"
+        res = fetch_emails_from_imap(max_count=15)
+        sync_state.last_status = res.get("status", "unknown")
+        sync_state.last_message = res.get("message", "")
+        if res.get("status") in ["error", "auth_error"]:
+            sync_state.last_error = res.get("message")
+        else:
+            sync_state.last_error = None
 
 
 def scheduler_worker_loop():
@@ -397,9 +449,8 @@ def scheduler_worker_loop():
             sync_state.last_error = str(e)
             print(f"[IMAP Scheduler Error] Unexpected cycle error: {e}")
 
-        # Sleep for the configured interval (checking stop_event every 2 seconds for clean shutdown)
-        creds = get_imap_credentials()
-        interval_secs = creds["interval_minutes"] * 60
+        # Sleep for 5 minutes (checking stop_event every 2 seconds for clean shutdown)
+        interval_secs = 300
         elapsed = 0
         while elapsed < interval_secs and not sync_state.stop_event.is_set():
             time.sleep(2)
@@ -429,9 +480,9 @@ def stop_imap_scheduler():
     print("[IMAP Scheduler] Stop signal sent.")
 
 
-def get_imap_status_summary() -> Dict[str, Any]:
+def get_imap_status_summary(user_id: Optional[int] = None) -> Dict[str, Any]:
     """Return status summary for frontend dashboard & integrations display."""
-    creds = get_imap_credentials()
+    creds = get_imap_credentials(user_id=user_id)
     return {
         "enabled": creds["is_configured"],
         "is_running": sync_state.is_running,
@@ -440,8 +491,9 @@ def get_imap_status_summary() -> Dict[str, Any]:
         "interval_minutes": creds["interval_minutes"],
         "last_sync_time": sync_state.last_sync_time.isoformat() if sync_state.last_sync_time else None,
         "next_sync_time": sync_state.next_sync_time.isoformat() if sync_state.next_sync_time else None,
-        "last_status": sync_state.last_status,
-        "last_message": sync_state.last_message,
+        "last_status": "Connected" if creds["is_configured"] else "Not Connected",
+        "last_message": f"Connected to {creds['user']}" if creds["is_configured"] else "Connect Gmail using App Password",
         "last_error": sync_state.last_error,
-        "total_synced_count": sync_state.total_synced_count
+        "total_synced_count": sync_state.total_synced_count,
+        "is_user_connected": creds.get("is_user_connected", False)
     }
