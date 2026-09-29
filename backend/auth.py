@@ -37,14 +37,29 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
+def _safe_password_bytes(password: str) -> bytes:
+    """Ensure password conforms to the 72-byte bcrypt standard."""
+    pwd_bytes = (password or "").encode("utf-8")
+    return pwd_bytes[:72] if len(pwd_bytes) > 72 else pwd_bytes
+
+
 def hash_password(password: str) -> str:
-    """Hash plaintext password with bcrypt."""
-    return pwd_context.hash(password)
+    """Hash plaintext password with bcrypt (handles 72-byte limitation safely)."""
+    pwd_bytes = _safe_password_bytes(password)
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify password against bcrypt hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify password against bcrypt hash with fallback."""
+    pwd_bytes = _safe_password_bytes(plain_password)
+    try:
+        return bcrypt.checkpw(pwd_bytes, hashed_password.encode("utf-8"))
+    except Exception:
+        try:
+            return pwd_context.verify(plain_password[:72], hashed_password)
+        except Exception:
+            return False
 
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:

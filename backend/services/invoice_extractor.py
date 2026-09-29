@@ -438,11 +438,12 @@ def save_invoice_to_db(data: Dict[str, Any], file_name: str, file_path: str) -> 
                 ) VALUES (?, 'purchase', ?, 'Vendor Invoice', ?, 'Bank/NEFT', ?, ?, ?)
             ''', (inv_date, vendor, amount, txn_status, due_date, inv_num))
         else:
+            txn_db_id = existing_txn["id"] if (isinstance(existing_txn, dict) or hasattr(existing_txn, "keys")) else existing_txn[0]
             cursor.execute('''
                 UPDATE transactions 
                 SET date = ?, amount = ?, status = ?, due_date = ?
                 WHERE id = ?
-            ''', (inv_date, amount, txn_status, due_date, existing_txn[0]))
+            ''', (inv_date, amount, txn_status, due_date, txn_db_id))
 
     conn.commit()
     conn.close()

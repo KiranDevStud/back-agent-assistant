@@ -265,7 +265,7 @@ Return strictly valid JSON:
   ]
 }}
 """
-    raw_response = call_local_model(prompt, system_prompt=system_prompt, json_mode=True, timeout=6, num_predict=120)
+    raw_response = call_local_model(prompt, system_prompt=system_prompt, json_mode=True, timeout=12, num_predict=120)
     if not raw_response:
         return None
 
