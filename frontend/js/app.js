@@ -33,10 +33,13 @@ window.fetch = async function (url, options = {}) {
 
 const App = {
   currentTab: "briefing-view",
+  deferredPrompt: null,
 
   async init() {
     this.initTheme();
     this.bindEvents();
+    this.registerServiceWorker();
+    this.initPwaInstallPrompt();
     
     // Initialize components
     await AuthComponent.init();
@@ -52,6 +55,74 @@ const App = {
     }
 
     await this.refreshGlobalKPIs();
+  },
+
+  registerServiceWorker() {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js", { scope: "/" })
+          .then((reg) => {
+            console.log("[PWA] Service Worker registered:", reg.scope);
+          })
+          .catch((err) => {
+            console.warn("[PWA] Service Worker registration failed:", err);
+          });
+      });
+    }
+  },
+
+  initPwaInstallPrompt() {
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      this.deferredPrompt = e;
+      const installBtn = document.getElementById("btn-pwa-install");
+      if (installBtn) {
+        installBtn.style.display = "inline-flex";
+      }
+    });
+
+    window.addEventListener("appinstalled", () => {
+      this.deferredPrompt = null;
+      const installBtn = document.getElementById("btn-pwa-install");
+      if (installBtn) installBtn.style.display = "none";
+      this.showToast("PattuBook installed successfully! Enjoy your mobile app experience.", "success");
+    });
+  },
+
+  async installPwa() {
+    if (!this.deferredPrompt) {
+      this.showToast("To install on iOS: Tap Share -> 'Add to Home Screen'. On Android: Tap browser menu -> 'Install app'.", "info");
+      return;
+    }
+    this.deferredPrompt.prompt();
+    const { outcome } = await this.deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      this.deferredPrompt = null;
+      const installBtn = document.getElementById("btn-pwa-install");
+      if (installBtn) installBtn.style.display = "none";
+    }
+  },
+
+  toggleMobileDrawer() {
+    const sidebar = document.getElementById("app-sidebar");
+    const backdrop = document.getElementById("sidebar-backdrop");
+    if (!sidebar) return;
+    const isOpen = sidebar.classList.contains("drawer-open");
+    if (isOpen) {
+      this.closeMobileDrawer();
+    } else {
+      sidebar.classList.add("drawer-open");
+      if (backdrop) backdrop.classList.add("active");
+      document.body.classList.add("drawer-no-scroll");
+    }
+  },
+
+  closeMobileDrawer() {
+    const sidebar = document.getElementById("app-sidebar");
+    const backdrop = document.getElementById("sidebar-backdrop");
+    if (sidebar) sidebar.classList.remove("drawer-open");
+    if (backdrop) backdrop.classList.remove("active");
+    document.body.classList.remove("drawer-no-scroll");
   },
 
   initTheme() {
@@ -102,11 +173,20 @@ const App = {
   switchTab(tabId) {
     this.currentTab = tabId;
 
-    // Update nav links
+    // Update desktop sidebar nav links
     document.querySelectorAll(".nav-item").forEach(item => {
       if (item.dataset.tab === tabId) item.classList.add("active");
       else item.classList.remove("active");
     });
+
+    // Update mobile bottom nav buttons
+    document.querySelectorAll(".mobile-nav-btn").forEach(btn => {
+      if (btn.dataset.tab === tabId) btn.classList.add("active");
+      else btn.classList.remove("active");
+    });
+
+    // Close mobile drawer on tab switch
+    this.closeMobileDrawer();
 
     // Update page views
     document.querySelectorAll(".page-view").forEach(view => {

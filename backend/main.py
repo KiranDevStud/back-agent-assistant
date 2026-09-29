@@ -437,6 +437,24 @@ FRONTEND_DIR = BASE_DIR / "frontend"
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
+@app.get("/manifest.json")
+def serve_manifest():
+    manifest_file = FRONTEND_DIR / "manifest.json"
+    if manifest_file.exists():
+        return FileResponse(str(manifest_file), media_type="application/manifest+json")
+    raise HTTPException(status_code=404, detail="manifest.json not found")
+
+@app.get("/sw.js")
+def serve_service_worker():
+    sw_file = FRONTEND_DIR / "sw.js"
+    if sw_file.exists():
+        return FileResponse(
+            str(sw_file),
+            media_type="application/javascript",
+            headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"}
+        )
+    raise HTTPException(status_code=404, detail="sw.js not found")
+
 @app.get("/")
 def serve_index():
     index_file = FRONTEND_DIR / "index.html"

@@ -3,18 +3,33 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>pattubook • Smart Back-Office Assistant for Small Businesses</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PattuBook • Smart Back-Office Assistant for Small Businesses</title>
   <meta name="description"
     content="Lightweight AI assistant unifying invoice extraction, payment reminders, daily MIS reports, email summaries, and GST compliance for Indian retailers and shopkeepers.">
+  
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PattuBook">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+  
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 
 <body>
 
+  <!-- Mobile Drawer Backdrop Overlay -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="App.closeMobileDrawer()"></div>
+
   <div class="app-container">
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar">
+    <!-- Sidebar Navigation (Responsive Drawer on Mobile) -->
+    <aside class="sidebar" id="app-sidebar">
+      <button class="mobile-drawer-close" onclick="App.closeMobileDrawer()" aria-label="Close menu">&times;</button>
       <div class="brand-wrapper">
         <div class="brand-icon"></div>
         <div class="brand-text">
@@ -66,6 +81,10 @@
     <div class="main-wrapper">
       <!-- Top Sticky Navigation Bar -->
       <header class="top-navbar">
+        <button class="mobile-drawer-toggle" id="btn-mobile-drawer" onclick="App.toggleMobileDrawer()" aria-label="Open Navigation Menu">
+          &#9776;
+        </button>
+
         <div class="store-meta">
           <div class="store-name-badge">
             <span class="live-indicator" title="System Active"></span>
@@ -75,13 +94,16 @@
         </div>
 
         <div class="top-actions">
-          <button class="btn btn-secondary btn-sm" onclick="App.switchTab('assistant-view')"
+          <button class="btn btn-secondary btn-sm nav-btn-desktop" onclick="App.switchTab('assistant-view')"
             title="Ask Local AI Assistant">
             Ask AI Assistant
           </button>
-          <button class="btn btn-secondary btn-sm" onclick="App.switchTab('integrations-view')"
+          <button class="btn btn-secondary btn-sm nav-btn-desktop" onclick="App.switchTab('integrations-view')"
             title="Connected Apps & Cloud">
             Integrations
+          </button>
+          <button class="btn btn-primary btn-sm btn-pwa-install" id="btn-pwa-install" onclick="App.installPwa()" style="display: none;" title="Install PattuBook as an App">
+            📱 Install App
           </button>
           <button class="btn btn-primary btn-sm" id="header-auth-btn" onclick="AuthComponent.openAuthModal('signin')">
             Sign In / Register
@@ -695,6 +717,30 @@
       </div>
     </div>
   </div>
+
+  <!-- Modern Mobile Bottom Navigation Bar (Visible on mobile/tablet screens) -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+    <button class="mobile-nav-btn active" data-tab="briefing-view" onclick="App.switchTab('briefing-view')">
+      <span class="nav-icon">☀️</span>
+      <span class="nav-label">Briefing</span>
+    </button>
+    <button class="mobile-nav-btn" data-tab="invoices-view" onclick="App.switchTab('invoices-view')">
+      <span class="nav-icon">🧾</span>
+      <span class="nav-label">Invoices</span>
+    </button>
+    <button class="mobile-nav-btn" data-tab="mis-view" onclick="App.switchTab('mis-view')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">MIS</span>
+    </button>
+    <button class="mobile-nav-btn" data-tab="comms-view" onclick="App.switchTab('comms-view')">
+      <span class="nav-icon">💬</span>
+      <span class="nav-label">Reminders</span>
+    </button>
+    <button class="mobile-nav-btn" id="btn-mobile-more" onclick="App.toggleMobileDrawer()">
+      <span class="nav-icon">☰</span>
+      <span class="nav-label">More</span>
+    </button>
+  </nav>
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toast-container"></div>
