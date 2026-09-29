@@ -233,12 +233,16 @@ def save_transactions_to_db(records: List[Dict[str, Any]], user_id: Optional[int
 
     return {"inserted": inserted, "skipped": skipped, "total": len(records)}
 
-def generate_mis_report(skip_commentary: bool = False) -> Dict[str, Any]:
-    """Calculate executive MIS summary, charts, debtors list, and aging analysis."""
+def generate_mis_report(skip_commentary: bool = False, user_id: Optional[int] = None) -> Dict[str, Any]:
+    """Calculate executive MIS summary, charts, debtors list, and aging analysis for a specific user."""
     conn = get_db()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM transactions ORDER BY date ASC")
+    if user_id:
+        cursor.execute("SELECT * FROM transactions WHERE user_id = ? ORDER BY date ASC", (user_id,))
+    else:
+        # Unauthenticated / guest session has no private transactions
+        cursor.execute("SELECT * FROM transactions WHERE user_id = -999 ORDER BY date ASC")
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     
@@ -252,7 +256,7 @@ def generate_mis_report(skip_commentary: bool = False) -> Dict[str, Any]:
             "aging": {"0_15": 0, "16_30": 0, "31_60": 0, "60_plus": 0},
             "top_debtors": [],
             "daily_trends": {"labels": [], "sales": [], "expenses": []},
-            "ai_commentary": "No transaction records found. Please upload a daily sales spreadsheet or ledger."
+            "ai_commentary": "No transaction records recorded yet. Upload a sales spreadsheet or ledger to generate live MIS metrics."
         }
 
     total_sales = sum(r["amount"] for r in rows if r["type"] == "sale")

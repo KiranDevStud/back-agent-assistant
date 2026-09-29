@@ -47,12 +47,13 @@ app.include_router(integrations_router)
 
 @app.on_event("startup")
 def startup_event():
-    # Start periodic IMAP email fetching daemon (5-minute timer)
-    try:
-        from backend.services.imap_service import start_imap_scheduler
-        start_imap_scheduler()
-    except Exception as e:
-        print(f"[Startup Warning] Could not start IMAP background scheduler: {e}")
+    # Only start global IMAP background worker if explicitly enabled in environment
+    if os.getenv("ENABLE_GLOBAL_IMAP_SCHEDULER", "false").lower() == "true":
+        try:
+            from backend.services.imap_service import start_imap_scheduler
+            start_imap_scheduler()
+        except Exception as e:
+            print(f"[Startup Warning] Could not start IMAP background scheduler: {e}")
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -132,38 +133,61 @@ def api_get_local_ai_status():
 # Settings
 @app.get("/api/settings")
 def api_get_settings(user: Optional[User] = Depends(get_current_user_optional)):
+    if not user:
+        return {
+            "business_name": "My Store",
+            "owner_name": "Guest / Demo Mode",
+            "gstin": "",
+            "phone": "",
+            "email": "",
+            "upi_id": "",
+            "ca_email": "",
+            "currency_symbol": "₹",
+            "ai_provider": "local"
+        }
     settings = get_all_settings()
-    if user:
-        # Overlay user profile details
-        if user.business_name:
-            settings["business_name"] = user.business_name
-        if user.full_name:
-            settings["owner_name"] = user.full_name
-        if user.gstin:
-            settings["gstin"] = user.gstin
-        if user.phone:
-            settings["phone"] = user.phone
-        if user.upi_id:
-            settings["upi_id"] = user.upi_id
-        if user.ca_email:
-            settings["ca_email"] = user.ca_email
+    # Overlay user profile details
+    settings["business_name"] = user.business_name or "My Business"
+    settings["owner_name"] = user.full_name or "Business Owner"
+    settings["gstin"] = user.gstin or ""
+    settings["phone"] = user.phone or ""
+    settings["email"] = user.email or ""
+    settings["upi_id"] = user.upi_id or ""
+    settings["ca_email"] = user.ca_email or ""
     return settings
 
 @app.post("/api/settings")
 def api_update_settings(payload: SettingsPayload, user: Optional[User] = Depends(get_current_user_optional)):
     updates = {k: v for k, v in payload.dict().items() if v is not None}
-    update_settings(updates)
-    return {"message": "Settings saved successfully", "settings": get_all_settings()}
+    if user:
+        conn = get_db()
+        cursor = conn.cursor()
+        if "business_name" in updates:
+            cursor.execute("UPDATE users SET business_name = ? WHERE id = ?", (updates["business_name"], user.id))
+        if "owner_name" in updates:
+            cursor.execute("UPDATE users SET full_name = ? WHERE id = ?", (updates["owner_name"], user.id))
+        if "gstin" in updates:
+            cursor.execute("UPDATE users SET gstin = ? WHERE id = ?", (updates["gstin"], user.id))
+        if "phone" in updates:
+            cursor.execute("UPDATE users SET phone = ? WHERE id = ?", (updates["phone"], user.id))
+        if "upi_id" in updates:
+            cursor.execute("UPDATE users SET upi_id = ? WHERE id = ?", (updates["upi_id"], user.id))
+        if "ca_email" in updates:
+            cursor.execute("UPDATE users SET ca_email = ? WHERE id = ?", (updates["ca_email"], user.id))
+        conn.commit()
+        conn.close()
+    else:
+        update_settings(updates)
+    return {"message": "Settings saved successfully", "settings": api_get_settings(user)}
 
 # Invoices
 @app.get("/api/invoices")
 def api_get_invoices(user: Optional[User] = Depends(get_current_user_optional)):
+    if not user:
+        return []
     conn = get_db()
     cursor = conn.cursor()
-    if user:
-        cursor.execute("SELECT * FROM invoices WHERE user_id = ? OR user_id IS NULL ORDER BY id DESC", (user.id,))
-    else:
-        cursor.execute("SELECT * FROM invoices ORDER BY id DESC")
+    cursor.execute("SELECT * FROM invoices WHERE user_id = ? ORDER BY id DESC", (user.id,))
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
@@ -241,17 +265,17 @@ def api_delete_invoice(inv_id: int):
 
 # MIS & Analytics
 @app.get("/api/mis/report")
-def api_get_mis_report():
-    return generate_mis_report()
+def api_get_mis_report(user: Optional[User] = Depends(get_current_user_optional)):
+    return generate_mis_report(user_id=user.id if user else None)
 
 @app.post("/api/mis/upload")
-async def api_upload_spreadsheet(file: UploadFile = File(...)):
+async def api_upload_spreadsheet(file: UploadFile = File(...), user: Optional[User] = Depends(get_current_user_optional)):
     dest_path = UPLOADS_DIR / file.filename
     with open(dest_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
     records = parse_spreadsheet(str(dest_path))
-    stats = save_transactions_to_db(records)
+    stats = save_transactions_to_db(records, user_id=user.id if user else None)
     if stats["inserted"] > 0:
         msg = f"Processed {stats['inserted']} new transaction entries ({stats['skipped']} existing skipped)."
     else:
@@ -265,39 +289,42 @@ async def api_upload_spreadsheet(file: UploadFile = File(...)):
     }
 
 @app.post("/api/mis/load-sample")
-def api_load_sample_ledger():
+def api_load_sample_ledger(user: Optional[User] = Depends(get_current_user_optional)):
     sample_path = SAMPLES_DIR / "retail_sales_september.xlsx"
     if not sample_path.exists():
         raise HTTPException(status_code=404, detail="Sample excel not found")
     records = parse_spreadsheet(str(sample_path))
-    stats = save_transactions_to_db(records)
+    stats = save_transactions_to_db(records, user_id=user.id if user else None)
     return {
-        "message": f"Loaded {stats['inserted']} new transactions ({stats['skipped']} skipped)",
+        "message": f"Loaded {stats['inserted']} sample transactions ({stats['skipped']} skipped)",
         "count": stats["inserted"],
         "skipped": stats["skipped"]
     }
 
 # Emails & Morning Briefing
 @app.get("/api/emails")
-def api_get_emails():
+def api_get_emails(user: Optional[User] = Depends(get_current_user_optional)):
+    if not user:
+        return []
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM emails ORDER BY date DESC, id DESC")
+    cursor.execute("SELECT * FROM emails WHERE user_id = ? ORDER BY date DESC, id DESC", (user.id,))
     rows = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return rows
 
 @app.get("/api/emails/briefing")
-def api_get_morning_briefing():
-    return generate_morning_briefing()
+def api_get_morning_briefing(user: Optional[User] = Depends(get_current_user_optional)):
+    return generate_morning_briefing(user_id=user.id if user else None)
 
 @app.post("/api/emails/add")
-def api_add_email(req: ManualEmailRequest):
+def api_add_email(req: ManualEmailRequest, user: Optional[User] = Depends(get_current_user_optional)):
     process_and_save_emails([{
         "sender": req.sender,
         "sender_email": req.sender_email or "",
         "subject": req.subject,
-        "body": req.body
+        "body": req.body,
+        "user_id": user.id if user else None
     }])
     return {"message": "Email ingested and categorized successfully"}
 
@@ -337,7 +364,7 @@ def api_assistant_chat(req: AssistantChatRequest, user: Optional[User] = Depends
     
     # Enrich with live real-time MIS metrics
     try:
-        mis = generate_mis_report(skip_commentary=True)
+        mis = generate_mis_report(skip_commentary=True, user_id=user.id if user else None)
         ctx["total_sales"] = mis.get("total_sales", 0.0)
         ctx["total_expenses"] = mis.get("total_expenses", 0.0)
         ctx["net_cash_flow"] = mis.get("net_cash_flow", 0.0)
@@ -349,11 +376,14 @@ def api_assistant_chat(req: AssistantChatRequest, user: Optional[User] = Depends
 
     # Enrich with live unpaid invoices & payables (bills user owes to vendors)
     try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT vendor_name, customer_name, invoice_number, total_amount, due_date, status, invoice_type FROM invoices WHERE status != 'Paid' ORDER BY id DESC LIMIT 20")
-        unpaid = [dict(r) for r in cursor.fetchall()]
-        conn.close()
+        if user:
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT vendor_name, customer_name, invoice_number, total_amount, due_date, status, invoice_type FROM invoices WHERE user_id = ? AND status != 'Paid' ORDER BY id DESC LIMIT 20", (user.id,))
+            unpaid = [dict(r) for r in cursor.fetchall()]
+            conn.close()
+        else:
+            unpaid = []
 
         payables = [inv for inv in unpaid if inv.get("invoice_type") == "purchase" or not inv.get("invoice_type")]
         total_payables = sum(p.get("total_amount", 0.0) for p in payables)

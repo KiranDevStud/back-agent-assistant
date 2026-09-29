@@ -126,12 +126,20 @@ def process_and_save_emails(email_list: List[Dict[str, str]]):
     conn.commit()
     conn.close()
 
-def generate_morning_briefing() -> Dict[str, Any]:
+def generate_morning_briefing(user_id: Optional[int] = None) -> Dict[str, Any]:
     """Compile a synthesized Morning Briefing for the business owner using Gemini AI or fallback."""
+    if not user_id:
+        return {
+            "headline": "Welcome to PattuBook! Sign in or register to view your daily communications & financial briefing.",
+            "urgent_actions": [],
+            "highlights": [],
+            "total_emails": 0,
+            "high_priority_count": 0
+        }
+
     conn = get_db()
     cursor = conn.cursor()
-    
-    cursor.execute("SELECT * FROM emails ORDER BY date DESC, id DESC LIMIT 20")
+    cursor.execute("SELECT * FROM emails WHERE user_id = ? ORDER BY date DESC, id DESC LIMIT 20", (user_id,))
     emails = [dict(r) for r in cursor.fetchall()]
     conn.close()
     

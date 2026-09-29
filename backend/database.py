@@ -238,6 +238,17 @@ def init_db():
     finally:
         session.close()
 
+    # 4. Clean up any orphan unassigned test/legacy data in production
+    try:
+        from sqlalchemy import text
+        with engine.connect() as cleanup_conn:
+            cleanup_conn.execute(text("DELETE FROM invoices WHERE user_id IS NULL"))
+            cleanup_conn.execute(text("DELETE FROM transactions WHERE user_id IS NULL"))
+            cleanup_conn.execute(text("DELETE FROM emails WHERE user_id IS NULL"))
+            cleanup_conn.commit()
+    except Exception as clean_err:
+        print(f"[init_db] Orphan cleanup note: {clean_err}")
+
 def get_all_settings(user_id: Optional[int] = None) -> Dict[str, str]:
     """Retrieve settings dictionary."""
     session: Session = SessionLocal()

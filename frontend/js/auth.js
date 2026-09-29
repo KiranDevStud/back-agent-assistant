@@ -1,5 +1,13 @@
 // PattuBook - Authentication & Email Verification Component
 
+async function safeJson(res) {
+  try {
+    return await res.json();
+  } catch (e) {
+    return { detail: `Server responded with status ${res.status}` };
+  }
+}
+
 const AuthComponent = {
   currentUser: null,
   token: localStorage.getItem("pattubook_token") || null,
@@ -47,7 +55,7 @@ const AuthComponent = {
         headers: { "Authorization": `Bearer ${this.token}` }
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await safeJson(res);
         this.currentUser = data.user;
         this.updateAuthUI();
       } else {
@@ -232,7 +240,7 @@ const AuthComponent = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) {
         throw new Error(data.detail || "Signup failed");
       }
@@ -285,7 +293,7 @@ const AuthComponent = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, email: email || undefined })
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) {
         throw new Error(data.detail || "Verification failed");
       }
@@ -319,7 +327,7 @@ const AuthComponent = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(data.detail || "Failed to resend");
 
       App.showToast(data.message, "success");
@@ -347,7 +355,7 @@ const AuthComponent = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
       });
-      const data = await res.json();
+      const data = await safeJson(res);
 
       if (res.status === 403) {
         // Unverified email
