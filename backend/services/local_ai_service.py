@@ -25,7 +25,10 @@ def get_local_ai_settings() -> Dict[str, str]:
 def ensure_ollama_running(endpoint: str = DEFAULT_ENDPOINT) -> bool:
     """Check if Ollama is running; if not, attempt to start it in the background."""
     try:
-        req = urllib.request.Request(f"{endpoint}/api/tags", headers={"User-Agent": "PattuBook-Local"})
+        req = urllib.request.Request(
+            f"{endpoint}/api/tags",
+            headers={"User-Agent": "PattuBook-Local", "ngrok-skip-browser-warning": "true"}
+        )
         with urllib.request.urlopen(req, timeout=2) as res:
             return res.status == 200
     except Exception:
@@ -58,7 +61,10 @@ def is_local_ai_available() -> Dict[str, Any]:
     cfg = get_local_ai_settings()
     endpoint = cfg["endpoint"]
     try:
-        req = urllib.request.Request(f"{endpoint}/api/tags", headers={"User-Agent": "PattuBook-Local"})
+        req = urllib.request.Request(
+            f"{endpoint}/api/tags",
+            headers={"User-Agent": "PattuBook-Local", "ngrok-skip-browser-warning": "true"}
+        )
         with urllib.request.urlopen(req, timeout=3) as res:
             if res.status == 200:
                 data = json.loads(res.read().decode("utf-8"))
@@ -130,7 +136,11 @@ def call_local_model(
         req = urllib.request.Request(
             f"{endpoint}/api/generate",
             data=data,
-            headers={"Content-Type": "application/json", "User-Agent": "PattuBook-Local"}
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "PattuBook-Local",
+                "ngrok-skip-browser-warning": "true"
+            }
         )
         with urllib.request.urlopen(req, timeout=timeout) as res:
             resp_data = json.loads(res.read().decode("utf-8"))
