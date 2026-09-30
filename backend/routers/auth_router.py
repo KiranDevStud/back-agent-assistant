@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr
@@ -60,16 +61,20 @@ def signup(req: SignupRequest, request: Request, db: Session = Depends(get_db_se
     # Generate token
     token, expires_at = generate_verification_token()
     
+    # Check if SMTP is configured for real delivery; otherwise auto-verify
+    smtp_configured = bool(os.getenv("SMTP_HOST") and os.getenv("SMTP_USER") and os.getenv("SMTP_PASSWORD"))
+    auto_verify = os.getenv("AUTO_VERIFY_SIGNUP", "true" if not smtp_configured else "false").lower() == "true"
+
     user = User(
         email=email_clean,
         password_hash=hash_password(req.password),
         full_name=req.full_name.strip(),
-        business_name=req.business_name.strip() if req.business_name else "Om Sai Traders & Enterprises",
+        business_name=req.business_name.strip() if req.business_name else "Enterprise Store",
         gstin=req.gstin.strip() if req.gstin else "27AAPCG1234F1Z8",
         phone=req.phone.strip() if req.phone else "",
-        is_verified=False,
-        verification_token=token,
-        verification_token_expires_at=expires_at,
+        is_verified=auto_verify,
+        verification_token=None if auto_verify else token,
+        verification_token_expires_at=None if auto_verify else expires_at,
     )
     db.add(user)
     db.commit()
@@ -79,8 +84,13 @@ def signup(req: SignupRequest, request: Request, db: Session = Depends(get_db_se
     host_url = str(request.base_url)
     dispatch_res = send_verification_email(user.email, user.full_name, token, host_url)
 
+    # Issue signed JWT token immediately so registration signs the user in seamlessly
+    access_token = create_access_token({"sub": str(user.id), "email": user.email})
+
     return {
-        "message": "Account created successfully! Please verify your email to activate your account.",
+        "message": "Account created successfully! Welcome to PattuBook.",
+        "access_token": access_token,
+        "token_type": "bearer",
         "user": user.to_dict(),
         "verification": dispatch_res
     }
@@ -161,11 +171,19 @@ def login(req: LoginRequest, db: Session = Depends(get_db_session)):
             detail="Invalid email or password"
         )
 
+    smtp_configured = bool(os.getenv("SMTP_HOST") and os.getenv("SMTP_USER") and os.getenv("SMTP_PASSWORD"))
+    auto_verify = os.getenv("AUTO_VERIFY_SIGNUP", "true" if not smtp_configured else "false").lower() == "true"
+
     if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email not verified. Please verify your email before logging in. You can click 'Resend Verification' if you need a new link."
-        )
+        if auto_verify:
+            user.is_verified = True
+            db.commit()
+            db.refresh(user)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email not verified. Please verify your email before logging in. You can click 'Resend Verification' if you need a new link."
+            )
 
     access_token = create_access_token({"sub": str(user.id), "email": user.email})
 

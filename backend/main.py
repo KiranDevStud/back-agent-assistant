@@ -455,6 +455,18 @@ def serve_service_worker():
         )
     raise HTTPException(status_code=404, detail="sw.js not found")
 
+@app.get("/login")
+@app.get("/signup")
+@app.get("/auth")
+def serve_auth_page():
+    auth_file = FRONTEND_DIR / "login.html"
+    if auth_file.exists():
+        return FileResponse(str(auth_file))
+    index_file = FRONTEND_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return {"message": "Login page initializing."}
+
 @app.get("/")
 def serve_index():
     index_file = FRONTEND_DIR / "index.html"

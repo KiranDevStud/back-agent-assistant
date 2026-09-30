@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PattuBook &bull; Sign In &amp; Register</title>
+  <meta name="description" content="Secure JWT authentication for PattuBook Smart Back-Office Assistant. Manage invoices, GST compliance, daily MIS, and automated communications.">
+  
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#090d16">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-heading: 'Outfit', var(--font-sans);
+      --bg-base: #060913;
+      --bg-card: rgba(15, 23, 42, 0.78);
+      --bg-input: rgba(30, 41, 59, 0.65);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focus: #6366f1;
+      --accent-primary: #6366f1;
+      --accent-primary-hover: #4f46e5;
+      --accent-success: #10b981;
+      --accent-danger: #ef4444;
+      --accent-warning: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-subtle: #64748b;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-card: 0 20px 50px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 20px));
+      padding-bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 20px));
+      padding-left: max(16px, env(safe-area-inset-left, 0px));
+      padding-right: max(16px, env(safe-area-inset-right, 0px));
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Ambient dynamic glow backdrops */
+    .bg-glow-1 {
+      position: fixed;
+      top: -150px;
+      left: -150px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(99, 102, 241, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bg-glow-2 {
+      position: fixed;
+      bottom: -150px;
+      right: -150px;
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 480px;
+      position: relative;
+      z-index: 10;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Brand Header */
+    .brand-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .brand-logo-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: inherit;
+      margin-bottom: 12px;
+    }
+
+    .logo-symbol {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .logo-symbol svg {
+      width: 22px;
+      height: 22px;
+      fill: #ffffff;
+    }
+
+    .brand-title {
+      font-family: var(--font-heading);
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Main Glass Card */
+    .auth-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-card);
+      padding: 28px 24px;
+    }
+
+    @media (min-width: 480px) {
+      .auth-card {
+        padding: 34px 30px;
+      }
+    }
+
+    /* Tab Switcher */
+    .auth-tabs {
+      display: flex;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      margin-bottom: 24px;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 14px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: var(--accent-primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 7px;
+      letter-spacing: 0.01em;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      width: 18px;
+      height: 18px;
+      color: var(--text-subtle);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .form-input {
+      width: 100%;
+      height: 44px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 0.92rem;
+      padding: 0 14px 0 42px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input.has-toggle {
+      padding-right: 44px;
+    }
+
+    .form-input:focus {
+      border-color: var(--border-focus);
+      background: rgba(30, 41, 59, 0.9);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-subtle);
+      font-size: 0.85rem;
+    }
+
+    .password-toggle-btn {
+      position: absolute;
+      right: 10px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+
+    .password-toggle-btn:hover {
+      color: var(--text-main);
+    }
+
+    /* Form Footer Meta */
+    .form-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: -6px;
+      margin-bottom: 20px;
+      font-size: 0.82rem;
+    }
+
+    .remember-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .remember-label input[type="checkbox"] {
+      accent-color: var(--accent-primary);
+      cursor: pointer;
+      width: 15px;
+      height: 15px;
+    }
+
+    .link-subtle {
+      color: var(--accent-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.15s;
+    }
+
+    .link-subtle:hover {
+      color: #818cf8;
+      text-decoration: underline;
+    }
+
+    /* Buttons */
+    .btn-submit {
+      width: 100%;
+      height: 46px;
+      background: linear-gradient(135deg, var(--accent-primary) 0%, #4338ca 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--accent-primary-hover) 0%, #3730a3 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(99, 102, 241, 0.5);
+    }
+
+    .btn-submit:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      height: 42px;
+      background: rgba(30, 41, 59, 0.5);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      margin-top: 10px;
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(30, 41, 59, 0.9);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Alerts */
+    .auth-alert {
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.84rem;
+      line-height: 1.4;
+      margin-bottom: 18px;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .auth-alert.danger {
+      display: flex;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .auth-alert.success {
+      display: flex;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #6ee7b7;
+    }
+
+    .auth-alert.info {
+      display: flex;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #c7d2fe;
+    }
+
+    .alert-icon {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      margin-top: 1px;
+    }
+
+    /* Divider */
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      margin: 22px 0 16px 0;
+      color: var(--text-subtle);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    .auth-divider span {
+      padding: 0 12px;
+    }
+
+    /* Password strength indicator */
+    .pwd-strength-bar {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .pwd-strength-fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s, background-color 0.3s;
+    }
+
+    /* Already logged in card state */
+    .already-logged-card {
+      display: none;
+      text-align: center;
+      padding: 10px 0;
+    }
+
+    .user-badge-avatar {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      color: #fff;
+      font-family: var(--font-heading);
+      font-size: 1.3rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px auto;
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+    }
+
+    .logged-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .logged-store {
+      font-size: 0.85rem;
+      color: var(--accent-primary);
+      margin-bottom: 20px;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #ffffff;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .footer-note {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 0.8rem;
+      color: var(--text-subtle);
+    }
+  </style>
+</head>
+<body>
+  <!-- Ambient background lighting -->
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <div class="auth-container">
+    <!-- Brand Header -->
+    <div class="brand-header">
+      <a href="/" class="brand-logo-wrap" title="Return to Dashboard">
+        <div class="logo-symbol">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 4h16v16H4V4zm2 2v12h12V6H6zm3 3h6v2H9V9zm0 4h6v2H9v-2z" />
+          </svg>
+        </div>
+        <span class="brand-title">PattuBook</span>
+      </a>
+      <p class="brand-subtitle">Smart Back-Office Assistant for Small Businesses</p>
+    </div>
+
+    <!-- Main Auth Card -->
+    <div class="auth-card">
+      <!-- Dynamic Alert Container -->
+      <div id="auth-alert" class="auth-alert">
+        <svg class="alert-icon" id="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span id="alert-text">Alert message</span>
+      </div>
+
+      <!-- State: Already Signed In Prompt -->
+      <div id="already-logged-section" class="already-logged-card">
+        <div class="user-badge-avatar" id="logged-avatar">PB</div>
+        <div class="logged-name" id="logged-user-name">Welcome Back</div>
+        <div class="logged-store" id="logged-store-name">Enterprise Store</div>
+        
+        <p style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 22px;">
+          You are currently signed in with an active JWT session.
+        </p>
+
+        <a href="/" class="btn-submit" style="text-decoration: none;">
+          Go to Dashboard
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </a>
+
+        <button type="button" class="btn-secondary" onclick="AuthPage.signOut()">
+          Sign Out / Switch Account
+        </button>
+      </div>
+
+      <!-- State: Sign In / Register / Verify Tabs -->
+      <div id="auth-forms-section">
+        <!-- Auth Navigation Tabs -->
+        <div class="auth-tabs">
+          <button type="button" class="tab-btn active" id="tab-signin" onclick="AuthPage.switchTab('signin')">
+            Sign In
+          </button>
+          <button type="button" class="tab-btn" id="tab-signup" onclick="AuthPage.switchTab('signup')">
+            Create Account
+          </button>
+          <button type="button" class="tab-btn" id="tab-verify" onclick="AuthPage.switchTab('verify')">
+            Verify Token
+          </button>
+        </div>
+
+        <!-- 1. SIGN IN FORM -->
+        <form id="form-signin" onsubmit="AuthPage.handleSignIn(event)">
+          <div class="form-group">
+            <label class="form-label" for="signin-email">Email Address</label>
+            <div class="input-wrapper">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+              </span>
+              <input type="email" id="signin-email" class="form-input" placeholder="e.g. owner@omsaigroups.in" required autocomplete="email" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="signin-password">Password</label>
+            <div class="input-wrapper">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+              <input type="password" id="signin-password" class="form-input has-toggle" placeholder="Enter your password" required autocomplete="current-password" />
+              <button type="button" class="password-toggle-btn" onclick="AuthPage.togglePassword('signin-password', this)" title="Show/Hide Password" aria-label="Toggle password visibility">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-meta">
+            <label class="remember-label">
+              <input type="checkbox" id="signin-remember" checked />
+              <span>Remember me</span>
+            </label>
+            <a href="javascript:void(0)" onclick="AuthPage.switchTab('verify')" class="link-subtle">
+              Verify code?
+            </a>
+          </div>
+
+          <button type="submit" class="btn-submit" id="btn-signin-submit">
+            <span>Sign In to PattuBook</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+
+          <div class="auth-divider">
+            <span>Or explore first</span>
+          </div>
+
+          <a href="/" class="btn-secondary">
+            Continue as Guest / Demo Mode
+          </a>
+        </form>
+
+        <!-- 2. CREATE ACCOUNT FORM -->
+        <form id="form-signup" onsubmit="AuthPage.handleSignUp(event)" style="display: none;">
+          <div class="form-group-row">
+            <div class="form-group">
+              <label class="form-label" for="signup-name">Full Name</label>
+              <div class="input-wrapper">
+                <span class="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </span>
+                <input type="text" id="signup-name" class="form-input" placeholder="Ramesh K. Gupta" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="signup-business">Shop / Business</label>
+              <div class="input-wrapper">
+                <span class="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                  </svg>
+                </span>
+                <input type="text" id="signup-business" class="form-input" placeholder="Om Sai Traders" required />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="signup-email">Work / Personal Email</label>
+            <div class="input-wrapper">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+              </span>
+              <input type="email" id="signup-email" class="form-input" placeholder="contact@omsaigroups.in" required autocomplete="email" />
+            </div>
+          </div>
+
+          <div class="form-group-row">
+            <div class="form-group">
+              <label class="form-label" for="signup-phone">Phone / WhatsApp</label>
+              <div class="input-wrapper">
+                <span class="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                </span>
+                <input type="tel" id="signup-phone" class="form-input" placeholder="+91 98200 12345" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="signup-gstin">GSTIN (Optional)</label>
+              <div class="input-wrapper">
+                <span class="input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                  </svg>
+                </span>
+                <input type="text" id="signup-gstin" class="form-input" placeholder="27AAPCG1234F1Z8" maxlength="15" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="signup-password">Create Password (min 6 chars)</label>
+            <div class="input-wrapper">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </span>
+              <input type="password" id="signup-password" class="form-input has-toggle" placeholder="At least 6 characters" required minlength="6" oninput="AuthPage.updateStrength(this.value)" autocomplete="new-password" />
+              <button type="button" class="password-toggle-btn" onclick="AuthPage.togglePassword('signup-password', this)" title="Show/Hide Password" aria-label="Toggle password visibility">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+            <div class="pwd-strength-bar">
+              <div class="pwd-strength-fill" id="pwd-strength-fill"></div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="btn-signup-submit" style="margin-top: 14px;">
+            <span>Create Account &amp; Sign In</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+
+          <div style="text-align: center; margin-top: 16px;">
+            <a href="javascript:void(0)" onclick="AuthPage.switchTab('signin')" class="link-subtle" style="font-size: 0.84rem;">
+              Already registered? Sign In
+            </a>
+          </div>
+        </form>
+
+        <!-- 3. VERIFY TOKEN FORM -->
+        <form id="form-verify" onsubmit="AuthPage.handleVerifyToken(event)" style="display: none;">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+            Enter your registered email address and the activation token received via email or admin dispatch.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="verify-email">Registered Email</label>
+            <div class="input-wrapper">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+              </span>
+              <input type="email" id="verify-email" class="form-input" placeholder="your@email.com" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="verify-token">Verification Token</label>
+            <div class="input-wrapper">
+              <span class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 2l-2 2m-2-2l2 2m-8 6l4-4 2 2-4 4m-4 4l-4 4a2.828 2.828 0 0 1-4-4l4-4"></path>
+                  <circle cx="15.5" cy="8.5" r="3.5"></circle>
+                </svg>
+              </span>
+              <input type="text" id="verify-token" class="form-input" placeholder="Paste verification token" required />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="btn-verify-submit">
+            <span>Verify &amp; Activate Account</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+
+          <button type="button" class="btn-secondary" onclick="AuthPage.handleResendCode()">
+            Resend Verification Code
+          </button>
+
+          <div style="text-align: center; margin-top: 16px;">
+            <a href="javascript:void(0)" onclick="AuthPage.switchTab('signin')" class="link-subtle" style="font-size: 0.84rem;">
+              Back to Sign In
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Security & Privacy footer -->
+    <div class="footer-note">
+      End-to-End JWT Session Security &bull; Offline Local AI Ready
+    </div>
+  </div>
+
+  <script>
+    const AuthPage = {
+      activeTab: "signin",
+
+      async init() {
+        // Read URL search params (e.g. ?tab=signup or ?tab=verify&token=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const hash = window.location.hash;
+        
+        let initialTab = urlParams.get("tab") || "signin";
+        if (hash.includes("signup")) initialTab = "signup";
+        if (hash.includes("verify") || hash.includes("token=")) initialTab = "verify";
+
+        // Check if token exists in URL or Hash
+        const tokenFromUrl = urlParams.get("token") || (new URLSearchParams(hash.replace(/^#\/?verify\??/, "")).get("token"));
+        const emailFromUrl = urlParams.get("email") || (new URLSearchParams(hash.replace(/^#\/?verify\??/, "")).get("email"));
+
+        if (tokenFromUrl) {
+          initialTab = "verify";
+          setTimeout(() => {
+            const tokenInput = document.getElementById("verify-token");
+            if (tokenInput) tokenInput.value = tokenFromUrl;
+            const emailInput = document.getElementById("verify-email");
+            if (emailInput && emailFromUrl) emailInput.value = emailFromUrl;
+            this.showAlert("info", "Verification token detected from link. Click 'Verify & Activate' to complete.");
+          }, 100);
+        }
+
+        // Restore remembered email
+        const rememberedEmail = localStorage.getItem("pattubook_remembered_email");
+        if (rememberedEmail) {
+          const emailInput = document.getElementById("signin-email");
+          if (emailInput) emailInput.value = rememberedEmail;
+        }
+
+        // Check active session
+        await this.checkExistingSession();
+
+        this.switchTab(initialTab);
+      },
+
+      async checkExistingSession() {
+        const token = localStorage.getItem("pattubook_token");
+        if (!token) return;
+
+        try {
+          const res = await fetch("/api/auth/me", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const user = data.user;
+            if (user) {
+              document.getElementById("auth-forms-section").style.display = "none";
+              const loggedSection = document.getElementById("already-logged-section");
+              loggedSection.style.display = "block";
+
+              const nameEl = document.getElementById("logged-user-name");
+              const storeEl = document.getElementById("logged-store-name");
+              const avatarEl = document.getElementById("logged-avatar");
+
+              if (nameEl) nameEl.textContent = user.full_name || "Business Owner";
+              if (storeEl) storeEl.textContent = user.business_name ? `${user.business_name} (${user.email})` : user.email;
+              if (avatarEl) {
+                const initials = (user.full_name || "PB")
+                  .split(" ")
+                  .map(n => n[0])
+                  .join("")
+                  .substring(0, 2)
+                  .toUpperCase();
+                avatarEl.textContent = initials;
+              }
+            }
+          } else {
+            // Expired or invalid token: clean up
+            localStorage.removeItem("pattubook_token");
+            localStorage.removeItem("pattubook_user");
+          }
+        } catch (e) {
+          console.warn("Session check offline:", e);
+        }
+      },
+
+      switchTab(tab) {
+        this.activeTab = tab;
+        ["signin", "signup", "verify"].forEach(t => {
+          const form = document.getElementById(`form-${t}`);
+          const btn = document.getElementById(`tab-${t}`);
+          if (form) form.style.display = t === tab ? "block" : "none";
+          if (btn) {
+            if (t === tab) {
+              btn.classList.add("active");
+            } else {
+              btn.classList.remove("active");
+            }
+          }
+        });
+        this.hideAlert();
+      },
+
+      showAlert(type, text) {
+        const alertBox = document.getElementById("auth-alert");
+        const alertText = document.getElementById("alert-text");
+        alertBox.className = `auth-alert ${type}`;
+        alertText.textContent = text;
+        alertBox.style.display = "flex";
+      },
+
+      hideAlert() {
+        const alertBox = document.getElementById("auth-alert");
+        if (alertBox) alertBox.style.display = "none";
+      },
+
+      togglePassword(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const isPassword = input.type === "password";
+        input.type = isPassword ? "text" : "password";
+
+        // Toggle icon
+        btn.innerHTML = isPassword
+          ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+               <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+               <line x1="1" y1="1" x2="23" y2="23"></line>
+             </svg>`
+          : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+               <circle cx="12" cy="12" r="3"></circle>
+             </svg>`;
+      },
+
+      updateStrength(val) {
+        const bar = document.getElementById("pwd-strength-fill");
+        if (!bar) return;
+        let score = 0;
+        if (val.length >= 6) score += 25;
+        if (val.length >= 10) score += 25;
+        if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score += 25;
+        if (/[^A-Za-z0-9]/.test(val)) score += 25;
+
+        bar.style.width = score + "%";
+        if (score <= 25) {
+          bar.style.backgroundColor = "var(--accent-danger)";
+        } else if (score <= 50) {
+          bar.style.backgroundColor = "var(--accent-warning)";
+        } else {
+          bar.style.backgroundColor = "var(--accent-success)";
+        }
+      },
+
+      async handleSignIn(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById("btn-signin-submit");
+        const email = document.getElementById("signin-email").value.trim();
+        const password = document.getElementById("signin-password").value;
+        const remember = document.getElementById("signin-remember").checked;
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="spinner"></span> Authenticating...`;
+        this.hideAlert();
+
+        try {
+          const res = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+          });
+          const data = await res.json();
+
+          if (res.status === 403) {
+            // Unverified
+            this.showAlert("warning", data.detail || "Email not verified. Enter token to complete activation.");
+            this.switchTab("verify");
+            const verifyEmail = document.getElementById("verify-email");
+            if (verifyEmail) verifyEmail.value = email;
+            return;
+          }
+
+          if (!res.ok) {
+            throw new Error(data.detail || "Invalid email or password.");
+          }
+
+          // Remember email preference
+          if (remember) {
+            localStorage.setItem("pattubook_remembered_email", email);
+          } else {
+            localStorage.removeItem("pattubook_remembered_email");
+          }
+
+          // Save JWT access token & user profile
+          localStorage.setItem("pattubook_token", data.access_token);
+          if (data.user) {
+            localStorage.setItem("pattubook_user", JSON.stringify(data.user));
+          }
+
+          this.showAlert("success", "Sign in successful! Redirecting to dashboard...");
+          submitBtn.innerHTML = `<span>Verified! Redirecting...</span>`;
+
+          setTimeout(() => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectUrl = urlParams.get("redirect") || "/";
+            window.location.href = redirectUrl;
+          }, 600);
+
+        } catch (err) {
+          this.showAlert("danger", err.message || "Network error. Please try again.");
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `
+            <span>Sign In to PattuBook</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>`;
+        }
+      },
+
+      async handleSignUp(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById("btn-signup-submit");
+        const payload = {
+          full_name: document.getElementById("signup-name").value.trim(),
+          business_name: document.getElementById("signup-business").value.trim(),
+          email: document.getElementById("signup-email").value.trim(),
+          phone: document.getElementById("signup-phone").value.trim(),
+          gstin: document.getElementById("signup-gstin").value.trim(),
+          password: document.getElementById("signup-password").value,
+        };
+
+        if (payload.password.length < 6) {
+          this.showAlert("danger", "Password must be at least 6 characters long.");
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="spinner"></span> Creating Account...`;
+        this.hideAlert();
+
+        try {
+          const res = await fetch("/api/auth/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.detail || "Account creation failed.");
+          }
+
+          // If JWT access token was returned directly, log the user in immediately
+          if (data.access_token) {
+            localStorage.setItem("pattubook_token", data.access_token);
+            if (data.user) {
+              localStorage.setItem("pattubook_user", JSON.stringify(data.user));
+            }
+            this.showAlert("success", "Account created successfully! Redirecting to dashboard...");
+            submitBtn.innerHTML = `<span>Welcome! Redirecting...</span>`;
+
+            setTimeout(() => {
+              window.location.href = "/";
+            }, 800);
+            return;
+          }
+
+          // Otherwise, switch to verification tab
+          this.showAlert("info", data.message || "Account registered. Please enter verification token.");
+          this.switchTab("verify");
+          const verifyEmail = document.getElementById("verify-email");
+          if (verifyEmail) verifyEmail.value = payload.email;
+
+          if (data.verification && data.verification.token) {
+            const verifyToken = document.getElementById("verify-token");
+            if (verifyToken) verifyToken.value = data.verification.token;
+          }
+
+        } catch (err) {
+          this.showAlert("danger", err.message || "Could not complete registration.");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `
+            <span>Create Account &amp; Sign In</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>`;
+        }
+      },
+
+      async handleVerifyToken(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById("btn-verify-submit");
+        const token = document.getElementById("verify-token").value.trim();
+        const email = document.getElementById("verify-email").value.trim();
+
+        if (!token) {
+          this.showAlert("warning", "Please provide the verification token.");
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="spinner"></span> Verifying...`;
+        this.hideAlert();
+
+        try {
+          const res = await fetch("/api/auth/verify-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token, email: email || undefined })
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.detail || "Invalid or expired token.");
+          }
+
+          // Save JWT token
+          localStorage.setItem("pattubook_token", data.access_token);
+          if (data.user) {
+            localStorage.setItem("pattubook_user", JSON.stringify(data.user));
+          }
+
+          this.showAlert("success", "Account verified and activated! Redirecting to dashboard...");
+          submitBtn.innerHTML = `<span>Verified! Redirecting...</span>`;
+
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 800);
+
+        } catch (err) {
+          this.showAlert("danger", err.message || "Verification failed.");
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `
+            <span>Verify &amp; Activate Account</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>`;
+        }
+      },
+
+      async handleResendCode() {
+        const email = document.getElementById("verify-email").value.trim();
+        if (!email) {
+          this.showAlert("warning", "Enter your registered email address first.");
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/auth/resend-verification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || "Could not resend code.");
+
+          this.showAlert("success", data.message || "Verification code dispatched.");
+          if (data.verification && data.verification.token) {
+            const tokenInput = document.getElementById("verify-token");
+            if (tokenInput) tokenInput.value = data.verification.token;
+          }
+        } catch (err) {
+          this.showAlert("danger", err.message || "Failed to resend.");
+        }
+      },
+
+      signOut() {
+        localStorage.removeItem("pattubook_token");
+        localStorage.removeItem("pattubook_user");
+        document.getElementById("already-logged-section").style.display = "none";
+        document.getElementById("auth-forms-section").style.display = "block";
+        this.showAlert("info", "Signed out successfully.");
+        this.switchTab("signin");
+      }
+    };
+
+    window.addEventListener("DOMContentLoaded", () => {
+      AuthPage.init();
+    });
+  </script>
+</body>
+</html>

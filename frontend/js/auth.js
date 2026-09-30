@@ -99,7 +99,7 @@ const AuthComponent = {
       if (avatarEl) avatarEl.innerText = "DM";
       if (authBtn) {
         authBtn.innerHTML = `Sign In / Register`;
-        authBtn.onclick = () => this.openAuthModal("signin");
+        authBtn.onclick = () => window.location.href = "/login";
         authBtn.classList.remove("btn-secondary");
         authBtn.classList.add("btn-primary");
       }
