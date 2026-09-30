@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import shutil
 import urllib.request
 import urllib.error
 from typing import Dict, Any, List, Optional
@@ -23,7 +24,7 @@ def get_local_ai_settings() -> Dict[str, str]:
     }
 
 def ensure_ollama_running(endpoint: str = DEFAULT_ENDPOINT) -> bool:
-    """Check if Ollama is running; if not, attempt to start it in the background."""
+    """Check if Ollama is running; if not, attempt to start it in the background on local machine."""
     try:
         req = urllib.request.Request(
             f"{endpoint}/api/tags",
@@ -34,7 +35,12 @@ def ensure_ollama_running(endpoint: str = DEFAULT_ENDPOINT) -> bool:
     except Exception:
         pass
 
-    # Try starting Ollama in background on Windows
+    # Only attempt to auto-start ollama if endpoint is localhost and ollama CLI is actually installed
+    is_localhost = any(h in endpoint.lower() for h in ("localhost", "127.0.0.1", "0.0.0.0"))
+    if not is_localhost or not shutil.which("ollama"):
+        return False
+
+    # Try starting Ollama in background on Windows / local machine
     try:
         subprocess.Popen(
             ["ollama", "serve"],
@@ -145,6 +151,12 @@ def call_local_model(
         with urllib.request.urlopen(req, timeout=timeout) as res:
             resp_data = json.loads(res.read().decode("utf-8"))
             return resp_data.get("response", "").strip()
+    except urllib.error.HTTPError as e:
+        if e.code == 502:
+            print(f"[LocalAIService] Ollama upstream unreachable (HTTP 502 Bad Gateway) for endpoint {endpoint}. Verify that 'ollama serve' is running on your local machine.")
+        else:
+            print(f"[LocalAIService] Ollama HTTP error {e.code} with model {model}: {e}")
+        return None
     except Exception as e:
         print(f"[LocalAIService] Ollama call error with model {model}: {e}")
         return None
