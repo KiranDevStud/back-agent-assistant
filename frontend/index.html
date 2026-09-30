@@ -19,6 +19,16 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
   
   <link rel="stylesheet" href="/static/css/style.css">
+  
+  <!-- Strict Authentication Guard: Only authenticated users can access the dashboard -->
+  <script>
+    (function () {
+      var token = localStorage.getItem("pattubook_token");
+      if (!token) {
+        window.location.replace("/login");
+      }
+    })();
+  </script>
 </head>
 
 <body>

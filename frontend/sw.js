@@ -1,7 +1,8 @@
 // PattuBook Progressive Web App Service Worker
-const CACHE_NAME = 'pattubook-v1';
+const CACHE_NAME = 'pattubook-v2';
 const STATIC_ASSETS = [
   '/',
+  '/login',
   '/manifest.json',
   '/static/css/style.css',
   '/static/js/app.js',

@@ -14,11 +14,11 @@ const AuthComponent = {
 
   async init() {
     this.checkUrlForVerificationToken();
-    if (this.token) {
-      await this.loadUserProfile();
-    } else {
-      this.updateAuthUI();
+    if (!this.token) {
+      window.location.replace("/login");
+      return;
     }
+    await this.loadUserProfile();
   },
 
   checkUrlForVerificationToken() {
@@ -461,24 +461,11 @@ const AuthComponent = {
     }
   },
 
-  async logout(showNotice = true) {
+  async logout(showNotice = false) {
     this.token = null;
     this.currentUser = null;
     localStorage.removeItem("pattubook_token");
     localStorage.removeItem("pattubook_user");
-    this.updateAuthUI();
-    if (showNotice) {
-      App.showToast("Signed out. Switched to Guest / Demo mode.", "info");
-    }
-    // Flush and reset feeds to clean guest state
-    await SettingsComponent.loadSettings();
-    if (typeof BriefingComponent !== "undefined") {
-      await BriefingComponent.loadBriefing();
-      await BriefingComponent.loadEmailFeed();
-    }
-    if (typeof InvoicesComponent !== "undefined") {
-      await InvoicesComponent.loadInvoices();
-    }
-    await App.refreshGlobalKPIs();
+    window.location.replace("/login");
   }
 };
