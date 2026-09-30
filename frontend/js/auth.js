@@ -70,13 +70,16 @@ const AuthComponent = {
 
   updateAuthUI() {
     const nameEl = document.getElementById("sidebar-user-name");
+    const roleEl = document.getElementById("sidebar-user-role");
     const avatarEl = document.getElementById("sidebar-user-avatar");
     const storeBadge = document.getElementById("nav-store-name");
     const gstinBadge = document.getElementById("nav-store-gstin");
     const authBtn = document.getElementById("header-auth-btn");
+    const sidebarAuthBtn = document.getElementById("sidebar-auth-action-btn");
 
     if (this.currentUser) {
       if (nameEl) nameEl.innerText = this.currentUser.full_name || "Business Owner";
+      if (roleEl) roleEl.innerText = this.currentUser.business_name || "Proprietor / Retailer";
       if (avatarEl) {
         const initials = (this.currentUser.full_name || "BO")
           .split(" ")
@@ -94,14 +97,27 @@ const AuthComponent = {
         authBtn.classList.remove("btn-primary");
         authBtn.classList.add("btn-secondary");
       }
+      if (sidebarAuthBtn) {
+        sidebarAuthBtn.innerText = "Sign Out";
+        sidebarAuthBtn.onclick = () => this.confirmLogout();
+        sidebarAuthBtn.classList.remove("btn-primary");
+        sidebarAuthBtn.classList.add("btn-secondary");
+      }
     } else {
       if (nameEl) nameEl.innerText = "Guest / Demo Mode";
+      if (roleEl) roleEl.innerText = "Tap to Sign In";
       if (avatarEl) avatarEl.innerText = "DM";
       if (authBtn) {
         authBtn.innerHTML = `Sign In / Register`;
         authBtn.onclick = () => window.location.href = "/login";
         authBtn.classList.remove("btn-secondary");
         authBtn.classList.add("btn-primary");
+      }
+      if (sidebarAuthBtn) {
+        sidebarAuthBtn.innerText = "Sign In / Register";
+        sidebarAuthBtn.onclick = () => window.location.href = "/login";
+        sidebarAuthBtn.classList.remove("btn-secondary");
+        sidebarAuthBtn.classList.add("btn-primary");
       }
     }
   },
@@ -131,7 +147,7 @@ const AuthComponent = {
             <label class="form-label">Password</label>
             <input type="password" id="auth-login-password" class="form-input" placeholder="••••••••" required />
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; gap: 10px;">
             <a href="javascript:void(0)" onclick="AuthComponent.switchAuthTab('signup')" style="font-size: 0.82rem; color: var(--accent-primary);">Create account</a>
             <button type="submit" class="btn btn-primary" id="btn-submit-login">Sign In</button>
           </div>
@@ -169,9 +185,9 @@ const AuthComponent = {
             <label class="form-label">Password</label>
             <input type="password" id="auth-signup-password" class="form-input" placeholder="At least 6 characters" required minlength="6" />
           </div>
-          <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
             <a href="javascript:void(0)" onclick="AuthComponent.switchAuthTab('signin')" style="font-size: 0.82rem; color: var(--accent-primary);">Already have an account?</a>
-            <button type="submit" class="btn btn-primary" id="btn-submit-signup">Register & Send Verification</button>
+            <button type="submit" class="btn btn-primary" id="btn-submit-signup">Create Account</button>
           </div>
         </form>
       </div>
@@ -191,11 +207,17 @@ const AuthComponent = {
             <label class="form-label">Verification Token</label>
             <input type="text" id="auth-verify-token" class="form-input" placeholder="Paste 32-character verification token" required />
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 18px; gap: 10px;">
             <button type="button" class="btn btn-secondary btn-sm" onclick="AuthComponent.handleResendVerification()">Resend Code</button>
             <button type="submit" class="btn btn-primary" id="btn-submit-verify">Verify & Activate Account</button>
           </div>
         </form>
+      </div>
+
+      <div style="text-align: center; margin-top: 18px; border-top: 1px solid var(--border-subtle); padding-top: 12px;">
+        <a href="/login" style="font-size: 0.82rem; color: var(--accent-primary); text-decoration: none; font-weight: 600;">
+          Prefer full-screen page? Open dedicated Login / Register page &rarr;
+        </a>
       </div>
     `;
 
@@ -245,6 +267,30 @@ const AuthComponent = {
         throw new Error(data.detail || "Signup failed");
       }
 
+      // If JWT access token was returned directly, log the user in immediately!
+      if (data.access_token) {
+        this.token = data.access_token;
+        localStorage.setItem("pattubook_token", this.token);
+        if (data.user) {
+          this.currentUser = data.user;
+          localStorage.setItem("pattubook_user", JSON.stringify(data.user));
+        }
+        this.updateAuthUI();
+        App.closeModal();
+        App.showToast(`Welcome ${this.currentUser ? this.currentUser.full_name : ''}! Account created and signed in.`, "success");
+
+        await SettingsComponent.loadSettings();
+        if (typeof BriefingComponent !== "undefined") {
+          await BriefingComponent.loadBriefing();
+          await BriefingComponent.loadEmailFeed();
+        }
+        if (typeof InvoicesComponent !== "undefined") {
+          await InvoicesComponent.loadInvoices();
+        }
+        await App.refreshGlobalKPIs();
+        return;
+      }
+
       App.showToast("Account created! Verification code issued.", "success");
       
       // Switch to verify tab
@@ -273,7 +319,7 @@ const AuthComponent = {
       App.showToast(err.message, "danger");
     } finally {
       btn.disabled = false;
-      btn.innerText = "Register & Send Verification";
+      btn.innerText = "Create Account";
     }
   },
 
@@ -301,13 +347,23 @@ const AuthComponent = {
       this.token = data.access_token;
       localStorage.setItem("pattubook_token", this.token);
       this.currentUser = data.user;
+      if (data.user) {
+        localStorage.setItem("pattubook_user", JSON.stringify(data.user));
+      }
       this.updateAuthUI();
 
       App.closeModal();
       App.showToast(`Welcome ${this.currentUser.full_name}! Account verified and logged in.`, "success");
 
-      // Reload settings & KPIs for user
+      // Reload settings & feeds for user
       await SettingsComponent.loadSettings();
+      if (typeof BriefingComponent !== "undefined") {
+        await BriefingComponent.loadBriefing();
+        await BriefingComponent.loadEmailFeed();
+      }
+      if (typeof InvoicesComponent !== "undefined") {
+        await InvoicesComponent.loadInvoices();
+      }
       await App.refreshGlobalKPIs();
     } catch (err) {
       App.showToast(err.message, "danger");
@@ -373,14 +429,23 @@ const AuthComponent = {
       this.token = data.access_token;
       localStorage.setItem("pattubook_token", this.token);
       this.currentUser = data.user;
+      if (data.user) {
+        localStorage.setItem("pattubook_user", JSON.stringify(data.user));
+      }
       this.updateAuthUI();
 
       App.closeModal();
       App.showToast(`Logged in as ${this.currentUser.full_name}!`, "success");
 
-      // Refresh app data
+      // Refresh app data completely for the new user session
       await SettingsComponent.loadSettings();
-      await InvoicesComponent.loadInvoices();
+      if (typeof BriefingComponent !== "undefined") {
+        await BriefingComponent.loadBriefing();
+        await BriefingComponent.loadEmailFeed();
+      }
+      if (typeof InvoicesComponent !== "undefined") {
+        await InvoicesComponent.loadInvoices();
+      }
       await App.refreshGlobalKPIs();
     } catch (err) {
       App.showToast(err.message, "danger");
@@ -396,14 +461,24 @@ const AuthComponent = {
     }
   },
 
-  logout(showNotice = true) {
+  async logout(showNotice = true) {
     this.token = null;
     this.currentUser = null;
     localStorage.removeItem("pattubook_token");
+    localStorage.removeItem("pattubook_user");
     this.updateAuthUI();
     if (showNotice) {
       App.showToast("Signed out. Switched to Guest / Demo mode.", "info");
-      SettingsComponent.loadSettings();
     }
+    // Flush and reset feeds to clean guest state
+    await SettingsComponent.loadSettings();
+    if (typeof BriefingComponent !== "undefined") {
+      await BriefingComponent.loadBriefing();
+      await BriefingComponent.loadEmailFeed();
+    }
+    if (typeof InvoicesComponent !== "undefined") {
+      await InvoicesComponent.loadInvoices();
+    }
+    await App.refreshGlobalKPIs();
   }
 };

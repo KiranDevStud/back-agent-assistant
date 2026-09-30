@@ -675,9 +675,10 @@ body {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(6px);
-  z-index: 200;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999 !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -999,6 +1000,8 @@ body.drawer-no-scroll {
 
   .store-meta {
     gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .gstin-pill {
@@ -1007,15 +1010,24 @@ body.drawer-no-scroll {
 
   .store-name-badge {
     font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .top-actions {
     gap: 6px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
   }
 
   #header-auth-btn {
+    display: inline-flex !important;
     font-size: 0.78rem;
     padding: 6px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   /* Content Area */
@@ -1077,18 +1089,36 @@ body.drawer-no-scroll {
 
   /* Modals: Bottom Sheet on Mobile */
   .modal-backdrop {
-    align-items: flex-end;
-    padding: 0;
+    z-index: 9999 !important;
+    align-items: flex-end !important;
+    padding: 0 !important;
   }
 
   .modal-card {
     width: 100% !important;
     max-width: 100% !important;
     border-radius: 20px 20px 0 0 !important;
-    max-height: 88vh;
+    max-height: 88vh !important;
+    max-height: 88dvh !important;
     margin: 0 !important;
-    padding: 20px 16px !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6) !important;
     animation: slideUpMobile 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .modal-header {
+    padding: 16px 20px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .modal-body {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 16px 20px calc(env(safe-area-inset-bottom, 0px) + 36px) 20px !important;
   }
 
   @keyframes slideUpMobile {

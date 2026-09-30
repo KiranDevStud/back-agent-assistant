@@ -67,11 +67,14 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div class="user-profile-badge">
+        <button class="btn btn-primary btn-sm" id="sidebar-auth-action-btn" onclick="window.location.href='/login'" style="width: 100%; margin-bottom: 12px; font-weight: 600;">
+          Sign In / Register
+        </button>
+        <div class="user-profile-badge" id="sidebar-user-badge" style="cursor: pointer;" onclick="window.location.href='/login'">
           <div class="avatar" id="sidebar-user-avatar">BO</div>
           <div class="user-info">
             <div class="user-name" id="sidebar-user-name">Business Owner</div>
-            <div class="user-role">Proprietor / Retailer</div>
+            <div class="user-role" id="sidebar-user-role">Proprietor / Retailer</div>
           </div>
         </div>
       </div>

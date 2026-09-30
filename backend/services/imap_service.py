@@ -59,6 +59,18 @@ def get_imap_credentials(user_id: Optional[int] = None) -> Dict[str, Any]:
                     "is_configured": bool(conn_app.account_email and pwd),
                     "is_user_connected": True
                 }
+            # For registered users who have not connected their own Gmail account,
+            # NEVER fall back to the server admin .env email credentials.
+            return {
+                "host": "imap.gmail.com",
+                "port": 993,
+                "user": "",
+                "password": "",
+                "interval_minutes": 5,
+                "folder": "INBOX",
+                "is_configured": False,
+                "is_user_connected": False
+            }
         finally:
             session.close()
 
