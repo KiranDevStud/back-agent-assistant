@@ -333,7 +333,7 @@ const IntegrationsComponent = {
         </p>
 
         <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: var(--radius-sm); padding: 12px; font-size: 0.82rem;">
-          <strong style="color: var(--accent-primary);">🔒 Security Requirement: Google App Password</strong>
+          <strong style="color: var(--accent-primary);">Security Requirement: Google App Password</strong>
           <p style="margin: 4px 0 0 0; color: var(--text-secondary);">
             Google does not allow third-party apps to use your regular password. You generate a dedicated 16-character <strong>App Password</strong> in 1 minute.
             <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color: var(--accent-primary); text-decoration: underline; margin-left: 4px;">Generate App Password &rarr;</a>
@@ -507,7 +507,7 @@ const IntegrationsComponent = {
     body.innerHTML = `
       <div style="display: flex; flex-direction: column; gap: 16px; font-size: 0.88rem; line-height: 1.6;">
         <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: var(--radius-sm); padding: 14px;">
-          <strong style="color: var(--accent-success); font-size: 0.95rem;">⚡ Why Use an App Password?</strong>
+          <strong style="color: var(--accent-success); font-size: 0.95rem;">Why Use an App Password?</strong>
           <p style="margin: 6px 0 0 0; color: var(--text-secondary);">
             A Google App Password is a secure 16-character passcode that lets PattuBook read supplier invoices, bills, and tax notices via IMAP SSL without sharing your main Google password.
           </p>
